@@ -32,7 +32,91 @@ Bot de Discord en Python que consulta el endpoint de Moonani PokeList para obten
 
 ## Prueba de funcionamiento breve
 
-cree una carpeta
+Antes de usar el bot de Discord, es posible validar desde cero la extraccion y el parseo de datos del endpoint de Moonani con un script independiente. Esta prueba no requiere clonar el repositorio completo ni configurar Discord.
+
+### 1. Crear una carpeta de trabajo
+
+```powershell
+mkdir prueba_moonani
+cd prueba_moonani
+```
+### 2. Crear el archivo test_pokelist_limpio.py
+Crea un archivo llamado test_pokelist_limpio.py y pega este contenido:
+
+```python
+import requests
+import re
+import html
+
+def extraer_coords(texto):
+    match = re.search(r'data-clipboard-text="([^"]+)"', texto)
+    return match.group(1) if match else ""
+
+def limpiar_nombre(texto):
+    # Primero decodifica entidades HTML (&#9792; -> ♀, &#9794; -> ♂)
+    texto = html.unescape(texto)
+    # Luego elimina las etiquetas HTML
+    texto = re.sub(r'<[^>]+>', '', texto)
+    # Limpia espacios extra
+    return texto.strip()
+
+def extraer_pais(texto):
+    texto = html.unescape(texto)
+    texto = re.sub(r'<[^>]+>', '', texto).strip()
+    return texto if texto else "??"
+
+url = "https://moonani.com/PokeList/ajax.php?page=pokemon&action=load"
+payload = {
+    "iv": 100,
+    "pvp": 0,
+    "pokemons": "",
+    "start": 0,
+    "length": 230,
+    "draw": 1
+}
+headers = {
+    "Referer": "https://moonani.com/PokeList/index.php",
+    "Content-Type": "application/x-www-form-urlencoded"
+}
+
+r = requests.post(url, data=payload, headers=headers)
+data = r.json().get("data", [])
+
+print(f"Total pokémones recibidos: {len(data)}\n")
+
+for p in data:
+    nombre = limpiar_nombre(p["Name"])
+    coords = extraer_coords(p["Coords"])
+    shiny  = "✨ SHINY" if p["Shiny"] == "Yes" else ""
+    pais   = extraer_pais(p["Country"])
+
+    print(f"{'='*50}")
+    print(f"🎯 {nombre} #{p['Number']} {shiny}")
+    print(f"📍 {coords}")
+    print(f"⚡ CP: {p['CP']} | Nivel: {p['Level']}")
+    print(f"💪 ATK:{p['Attack']} DEF:{p['Defense']} HP:{p['HP']}")
+    print(f"⏱️  Inicio: {p['Start Time']}")
+    print(f"⏱️  Fin:    {p['End Time']}")
+    print(f"🌍 País: {pais}")
+    print(f"🗺️  https://maps.google.com/?q={coords}")
+```
+### 3. Instalar la dependencia necesaria
+
+```powershell
+py -3.13 -m pip install requests
+```
+
+### 4. Ejecutar la prueba
+
+```powershell
+py -3.13 test_pokelist_limpio.py
+```
+**Resultado esperado**
+- Se realiza una peticion HTTP directa al endpoint de Moonani.
+- Se procesa la respuesta JSON recibida.
+- Se limpia el HTML embebido en campos como Name, Coords y Country.
+- Se imprime en consola una lista de pokémones con nombre, coordenadas, CP, nivel, stats, tiempo de aparicion y enlace de Google Maps.
+Esta prueba permite verificar de forma tecnica que el endpoint responde correctamente y que el parseo base funciona antes de integrar la logica en el bot de Discord.
 
 ## Instalacion para uso como bot de discord
 ### Clonar el repositorio
