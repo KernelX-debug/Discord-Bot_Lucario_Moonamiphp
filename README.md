@@ -89,6 +89,9 @@ py -3.13 discord_bot.py
 /pokemon nombre:wiglett cantidad:3
 /coords nombre:pikachu cantidad:5
 ```
+## Funcionamiento
+![Texto descriptivo](Discord-Bot_Lucario_Moonamiphp/assets/ping.png)
+
 
 ## Como invitar el bot a tu servidor
 
