@@ -41,7 +41,7 @@ mkdir prueba_moonani
 cd prueba_moonani
 ```
 ### 2. Crear el archivo test_pokelist_limpio.py
-Crea un archivo llamado test_pokelist_limpio.py y pega este contenido:
+Crea un archivo llamado test_pokelist_limpio.py con este contenido:
 
 ```python
 import requests
