@@ -55,7 +55,7 @@ py -3.13 -m pip install -r requirements.txt
 ```powershell
 @"
 DISCORD_BOT_TOKEN=pega_aqui_el_token_de_tu_bot
-DISCORD_GUILD_ID=pega_aqui_el_id_del_servidor_de_discord(opcional)
+DISCORD_GUILD_ID=
 MOONANI_TIMEOUT=20
 MOONANI_PAGE_SIZE=100
 MOONANI_MAX_SCAN_RECORDS=10000
