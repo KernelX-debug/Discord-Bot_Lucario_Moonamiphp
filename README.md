@@ -121,7 +121,7 @@ py -3.13 test_pokelist_limpio.py
 ## Imagen de referencia
 
 <p align="center">
-  <img src="assets/pikipeksearch.png" alt="Busqueda de Pikipek" width="45%">
+  <img src="assets/testmoonami.png" alt="test de moonami" width="45%">
 </p>
 
 ## Instalacion para uso como bot de discord
