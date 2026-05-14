@@ -111,12 +111,18 @@ py -3.13 -m pip install requests
 ```powershell
 py -3.13 test_pokelist_limpio.py
 ```
-**Resultado esperado**
+## Resultado esperado
 - Se realiza una peticion HTTP directa al endpoint de Moonani.
 - Se procesa la respuesta JSON recibida.
 - Se limpia el HTML embebido en campos como Name, Coords y Country.
 - Se imprime en consola una lista de pokémones con nombre, coordenadas, CP, nivel, stats, tiempo de aparicion y enlace de Google Maps.
-Esta prueba permite verificar de forma tecnica que el endpoint responde correctamente y que el parseo base funciona antes de integrar la logica en el bot de Discord.
+- Esta prueba permite verificar de forma tecnica que el endpoint responde correctamente y que el parseo base funciona antes de integrar la logica en el bot de Discord.
+
+## Imagen de referencia
+
+<p align="center">
+  <img src="assets/pikipeksearch.png" alt="Busqueda de Pikipek" width="45%">
+</p>
 
 ## Instalacion para uso como bot de discord
 ### Clonar el repositorio
