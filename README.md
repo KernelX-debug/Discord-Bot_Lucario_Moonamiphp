@@ -90,10 +90,16 @@ py -3.13 discord_bot.py
 /coords nombre:pikachu cantidad:5
 ```
 ## Funcionamiento
-![Texto descriptivo](assets/pingimage.png)
-![Texto descriptivo](assets/chikoritasearch.png)
-![Texto descriptivo](assets/pikipeksearch.png)
-![Texto descriptivo](assets/lucariosearch.png)
+
+<p align="center">
+  <img src="assets/pingimage.png" alt="Comando ping" width="45%">
+  <img src="assets/chikoritasearch.png" alt="Busqueda de Chikorita" width="45%">
+</p>
+
+<p align="center">
+  <img src="assets/pikipeksearch.png" alt="Busqueda de Pikipek" width="45%">
+  <img src="assets/lucariosearch.png" alt="Busqueda de Lucario" width="45%">
+</p>
 
 ## Como invitar el bot a tu servidor
 
