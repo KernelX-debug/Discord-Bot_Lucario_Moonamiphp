@@ -90,8 +90,9 @@ py -3.13 discord_bot.py
 /coords nombre:pikachu cantidad:5
 ```
 ## Funcionamiento
-![Texto descriptivo](Discord-Bot_Lucario_Moonamiphp/assets/ping.png)
-
+![Texto descriptivo](assets/pingimage.png)
+![Texto descriptivo](assets/chikoritasearch.png)
+![Texto descriptivo](assets/lucariosearch.png)
 
 ## Como invitar el bot a tu servidor
 
