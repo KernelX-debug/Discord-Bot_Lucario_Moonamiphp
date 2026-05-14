@@ -92,6 +92,7 @@ py -3.13 discord_bot.py
 ## Funcionamiento
 ![Texto descriptivo](assets/pingimage.png)
 ![Texto descriptivo](assets/chikoritasearch.png)
+![Texto descriptivo](assets/pikipeksearch.png)
 ![Texto descriptivo](assets/lucariosearch.png)
 
 ## Como invitar el bot a tu servidor
