@@ -30,7 +30,11 @@ Bot de Discord en Python que consulta el endpoint de Moonani PokeList para obten
 - Python 3.13 recomendado
 - Un bot creado en el [Discord Developer Portal](https://discord.com/developers/applications)
 
-## Instalacion
+## Prueba de funcionamiento breve
+
+cree una carpeta
+
+## Instalacion para uso como bot de discord
 ### Clonar el repositorio
 
 ```powershell
