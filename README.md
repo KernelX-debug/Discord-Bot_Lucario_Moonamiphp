@@ -1,4 +1,6 @@
-# Lucario - Moonani Discord Pokemon Coordinates Bot
+# 🤖 Lucario - Moonani Discord Pokemon Coordinates Bot
+![Discord](https://img.shields.io/badge/-Discord-5865F2?style=flat-square&logo=discord&logoColor=ffffff)
+![Python](https://img.shields.io/badge/-Python-3776AB?style=flat-square&logo=python&logoColor=ffffff)
 
 Bot de Discord en Python que consulta el endpoint de Moonani PokeList para obtener apariciones de Pokemon iv100, extrae coordenadas y las publica en Discord mediante comandos.
 
