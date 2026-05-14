@@ -1,19 +1,19 @@
 # Lucario - Moonani Discord Pokemon Coordinates Bot
 
-Bot de Discord en Python que consulta el endpoint de Moonani PokeList para obtener apariciones de Pokemon, extraer sus coordenadas y publicarlas en Discord mediante comandos slash.
+Bot de Discord en Python que consulta el endpoint de Moonani PokeList para obtener apariciones de Pokemon, extraer coordenadas y las publica en Discord mediante comandos.
 
 ## Que hace este proyecto
 
 - Consulta el endpoint `https://moonani.com/PokeList/ajax.php?page=pokemon&action=load`
 - Limpia el HTML que devuelve Moonani en campos como nombre, IV, coordenadas y pais
-- Extrae coordenadas listas para copiar y abrir en Google Maps
+- Extrae coordenadas listas para copiar y pegar, además de link dirigido a google maps.
 - Permite buscar por nombre parcial
-- Permite filtrar por IV minimo y por shiny
-- Responde en Discord con mensajes compactos o embeds
+- Permite filtrar por IV minimo y por disponibilidad de variocolor
+- Responde en Discord con mensajes compactos
 
 ## Estructura del proyecto
 
-- `discord_bot.py`: punto de entrada del bot y definicion de comandos slash
+- `discord_bot.py`: punto de entrada del bot y definicion de comandos
 - `moonani_client.py`: cliente HTTP y logica de parseo/filtrado de resultados
 - `test_pokelist_limpio.py`: script base limpio usado para validar la idea original
 - `.env.example`: ejemplo de variables de entorno
@@ -23,7 +23,7 @@ Bot de Discord en Python que consulta el endpoint de Moonani PokeList para obten
 
 - `/ping`: verifica si el bot esta en linea
 - `/pokemon`: muestra resultados con formato enriquecido
-- `/coords`: devuelve coordenadas en formato compacto para copiar rapido
+- `/coords`: devuelve coordenadas en formato compacto para copiar
 
 ## Requisitos
 
@@ -34,14 +34,16 @@ Bot de Discord en Python que consulta el endpoint de Moonani PokeList para obten
 
 ```powershell
 py -3.13 -m pip install -r requirements.txt
-Copy-Item .env.example .env
+@"
+"@ | Set-Content .env
+
 ```
 
 Configura tu token en `.env`:
 
 ```env
 DISCORD_BOT_TOKEN=pega_aqui_el_token_de_tu_bot
-DISCORD_GUILD_ID=
+DISCORD_GUILD_ID=pega_aqui_el_id_del_servidor_de_discord
 MOONANI_TIMEOUT=20
 MOONANI_PAGE_SIZE=100
 MOONANI_MAX_SCAN_RECORDS=10000
