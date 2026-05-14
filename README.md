@@ -92,11 +92,6 @@ py -3.13 discord_bot.py
 ## Funcionamiento
 
 <p align="center">
-  <img src="assets/pingimage.png" alt="Comando ping" width="45%">
-  <img src="assets/chikoritasearch.png" alt="Busqueda de Chikorita" width="45%">
-</p>
-
-<p align="center">
   <img src="assets/pikipeksearch.png" alt="Busqueda de Pikipek" width="45%">
   <img src="assets/lucariosearch.png" alt="Busqueda de Lucario" width="45%">
 </p>
