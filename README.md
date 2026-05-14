@@ -2,7 +2,7 @@
 
 Bot de Discord en Python que consulta el endpoint de Moonani PokeList para obtener apariciones de Pokemon iv100, extrae coordenadas y las publica en Discord mediante comandos.
 
-## Que hace este proyecto, ¿a que quiero llegar?
+## Que hace este proyecto. ¿A que quiero llegar?
 
 - Consulta el endpoint `https://moonani.com/PokeList/ajax.php?page=pokemon&action=load`
 - Limpia el HTML que devuelve Moonani en campos como nombre, IV, coordenadas y pais
