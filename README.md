@@ -201,7 +201,7 @@ py -3.13 discord_bot.py
 ## Mejoras futuras
 
 - Agregar busqueda por numero de Pokedex y por rango de CP
-- Utilizando el endpoint se puede acceder a más filtros de pokemones como pokemones para liga o 0iv
+- Utilizando el endpoint se puede acceder a más filtros de pokemones, sean para liga de combates o 0iv
 - En proceso....
 
 ## Notas
