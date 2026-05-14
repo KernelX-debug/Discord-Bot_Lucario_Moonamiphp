@@ -71,24 +71,6 @@ py -3.13 discord_bot.py
 4. Concede permisos como `View Channels`, `Send Messages`, `Embed Links` y `Read Message History`.
 5. Abre el enlace generado y selecciona tu servidor.
 
-## Que subir a GitHub
-
-Sube estos archivos:
-
-- `discord_bot.py`
-- `moonani_client.py`
-- `test_pokelist_limpio.py`
-- `requirements.txt`
-- `.env.example`
-- `.gitignore`
-- `README.md`
-
-No subas estos archivos:
-
-- `.env` porque contiene tu token
-- `__pycache__/` y archivos `*.pyc`
-- `test_pokelist.py` si quieres mantener el repositorio limpio y sin borradores
-
 ## Mejoras futuras
 
 - Agregar busqueda por numero de Pokedex y por rango de CP
@@ -109,4 +91,3 @@ No subas estos archivos:
 
 ## Licencia
 
-Antes de publicarlo como codigo abierto, te conviene agregar una licencia. Si quieres algo simple y permisivo, `MIT` suele ser una buena opcion.
