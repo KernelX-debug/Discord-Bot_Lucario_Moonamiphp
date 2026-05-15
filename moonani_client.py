@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlencode
 
 import requests
+import cloudscraper
 
 
 DATA_CLIPBOARD_RE = re.compile(r'data-clipboard-text="([^"]+)"')
@@ -125,44 +126,21 @@ class MoonaniClient:
         self.resolve_missing_countries = resolve_missing_countries
         self.geocoder_endpoint = geocoder_endpoint
         self.geocoder_user_agent = geocoder_user_agent
-        self.session = requests.Session()
+        self.session = cloudscraper.create_scraper(
+            browser={"browser": "chrome", "platform": "windows", "mobile": False}
+        )
         self.session.headers.update(
             {
-                "User-Agent": (
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/124.0.0.0 Safari/537.36"
-                ),
-                "Accept": "application/json, text/javascript, */*; q=0.01",
-                "Accept-Language": "en-US,en;q=0.9",
-                "Accept-Encoding": "gzip, deflate, br",
-                "Connection": "keep-alive",
-                "X-Requested-With": "XMLHttpRequest",
                 "Referer": self.referer,
-                "Origin": "https://moonani.com",
+                "Content-Type": "application/x-www-form-urlencoded",
             }
         )
         self._page_cache = {}  # type: Dict[Tuple[int, int, int, int], Tuple[float, Dict[str, Any]]]
         self._country_cache = {}  # type: Dict[str, str]
         self._geocoder_backoff_until = 0.0
         self._iv0_cache = None  # type: Optional[Tuple[float, List[PokemonSpawn]]]
-        self._session_warmed = False
-
-    def _warm_session(self) -> None:
-        """Hace un GET a la pagina principal primero para obtener cookies de
-        sesion de Cloudflare antes de cualquier llamada AJAX."""
-        if self._session_warmed:
-            return
-        try:
-            self.session.get(self.referer, timeout=self.timeout)
-        except Exception:
-            pass
-        finally:
-            self._session_warmed = True
 
     def _fetch_page(self, start: int, length: int, iv_filter: int, pvp: int) -> Dict[str, Any]:
-        self._warm_session()
-
         cache_key = (start, length, iv_filter, pvp)
         now = time.monotonic()
         cached = self._page_cache.get(cache_key)
@@ -178,12 +156,7 @@ class MoonaniClient:
             "draw": 1,
         }
 
-        response = self.session.post(
-            self.endpoint,
-            data=payload,
-            timeout=self.timeout,
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-        )
+        response = self.session.post(self.endpoint, data=payload, timeout=self.timeout)
         response.raise_for_status()
 
         data = response.json()
@@ -194,8 +167,6 @@ class MoonaniClient:
         return data
 
     def _fetch_iv0_page(self) -> List[PokemonSpawn]:
-        self._warm_session()
-
         now = time.monotonic()
         if self._iv0_cache and now - self._iv0_cache[0] < self.cache_ttl_seconds:
             return self._iv0_cache[1]
