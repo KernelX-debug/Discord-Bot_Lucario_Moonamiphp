@@ -14,6 +14,9 @@ HTML_TAG_RE = re.compile(r"<[^>]+>")
 SRC_RE = re.compile(r'src="([^"]+)"')
 IV_RE = re.compile(r"(\d+)")
 FLAG_RE = re.compile(r"/flags/([a-z]{2})\.png", re.IGNORECASE)
+TABLE_BODY_RE = re.compile(r"<tbody>(.*?)</tbody>", re.IGNORECASE | re.DOTALL)
+TABLE_ROW_RE = re.compile(r"<tr>(.*?)</tr>", re.IGNORECASE | re.DOTALL)
+TABLE_CELL_RE = re.compile(r"<td>(.*?)</td>", re.IGNORECASE | re.DOTALL)
 
 
 @dataclass
@@ -36,6 +39,24 @@ class PokemonSpawn:
     @property
     def maps_url(self) -> str:
         return f"https://maps.google.com/?q={self.coords}"
+
+    @property
+    def is_zero_iv(self) -> bool:
+        return self.attack == 0 and self.defense == 0 and self.hp == 0
+
+    @property
+    def unique_key(self) -> str:
+        return "|".join(
+            [
+                self.number,
+                self.coords,
+                self.start_time,
+                self.end_time,
+                str(self.attack),
+                str(self.defense),
+                str(self.hp),
+            ]
+        )
 
 
 def _strip_html(value: str) -> str:
@@ -89,6 +110,7 @@ class MoonaniClient:
         self,
         endpoint: str = "https://moonani.com/PokeList/ajax.php?page=pokemon&action=load",
         referer: str = "https://moonani.com/PokeList/index.php",
+        iv0_page_url: str = "https://moonani.com/PokeList/iv0.php",
         timeout: int = 20,
         cache_ttl_seconds: int = 45,
         resolve_missing_countries: bool = False,
@@ -97,6 +119,7 @@ class MoonaniClient:
     ) -> None:
         self.endpoint = endpoint
         self.referer = referer
+        self.iv0_page_url = iv0_page_url
         self.timeout = timeout
         self.cache_ttl_seconds = cache_ttl_seconds
         self.resolve_missing_countries = resolve_missing_countries
@@ -113,6 +136,7 @@ class MoonaniClient:
         self._page_cache = {}  # type: Dict[Tuple[int, int, int, int], Tuple[float, Dict[str, Any]]]
         self._country_cache = {}  # type: Dict[str, str]
         self._geocoder_backoff_until = 0.0
+        self._iv0_cache = None  # type: Optional[Tuple[float, List[PokemonSpawn]]]
 
     def _fetch_page(self, start: int, length: int, iv_filter: int, pvp: int) -> Dict[str, Any]:
         cache_key = (start, length, iv_filter, pvp)
@@ -139,6 +163,56 @@ class MoonaniClient:
 
         self._page_cache[cache_key] = (now, data)
         return data
+
+    def _fetch_iv0_page(self) -> List[PokemonSpawn]:
+        now = time.monotonic()
+        if self._iv0_cache and now - self._iv0_cache[0] < self.cache_ttl_seconds:
+            return self._iv0_cache[1]
+
+        response = self.session.get(self.iv0_page_url, timeout=self.timeout)
+        response.raise_for_status()
+
+        spawns = self._parse_iv0_page(response.text)
+        self._iv0_cache = (now, spawns)
+        return spawns
+
+    def _parse_iv0_page(self, page_html: str) -> List[PokemonSpawn]:
+        body_match = TABLE_BODY_RE.search(page_html)
+        if not body_match:
+            raise ValueError("No pude encontrar la tabla de IV 0 en la pagina de Moonani.")
+
+        rows_html = body_match.group(1)
+        spawns = []  # type: List[PokemonSpawn]
+
+        for row_html in TABLE_ROW_RE.findall(rows_html):
+            clean_row_html = re.sub(r"<!--.*?-->", "", row_html, flags=re.DOTALL)
+            cells = TABLE_CELL_RE.findall(clean_row_html)
+            if len(cells) < 14:
+                continue
+
+            spawn = PokemonSpawn(
+                name=_strip_html(cells[1]),
+                number=_strip_html(cells[2]),
+                coords=_extract_coords(cells[3]),
+                cp=_safe_int(_strip_html(cells[4])),
+                level=_safe_int(_strip_html(cells[5])),
+                attack=_safe_int(_strip_html(cells[6])),
+                defense=_safe_int(_strip_html(cells[7])),
+                hp=_safe_int(_strip_html(cells[8])),
+                iv_percent=_extract_iv_percent(cells[9]),
+                shiny=_strip_html(cells[10]).lower() == "yes",
+                start_time=_strip_html(cells[11]),
+                end_time=_strip_html(cells[12]),
+                country=_extract_country(cells[13]),
+                image_url=_extract_image_url(cells[1]),
+            )
+
+            if spawn.country == "Unknown" and self.resolve_missing_countries:
+                spawn.country = self.lookup_country_by_coords(spawn.coords)
+
+            spawns.append(spawn)
+
+        return spawns
 
     def parse_row(self, row: Dict[str, Any]) -> PokemonSpawn:
         coords = _extract_coords(str(row.get("Coords", "")))
@@ -257,3 +331,38 @@ class MoonaniClient:
             start += len(rows)
 
         return results
+
+    def search_zero_iv_pokemon(self, query: str = "", limit: int = 5) -> List[PokemonSpawn]:
+        if limit < 1:
+            raise ValueError("El limite debe ser mayor que cero.")
+
+        normalized_query = _normalize_name(query)
+        results = []  # type: List[PokemonSpawn]
+
+        for spawn in self._fetch_iv0_page():
+            if normalized_query and normalized_query not in _normalize_name(spawn.name):
+                continue
+            if not spawn.is_zero_iv:
+                continue
+
+            results.append(spawn)
+            if len(results) >= limit:
+                break
+
+        return results
+
+    def list_current_hundo_spawns(self, limit: int = 250, page_size: int = 100, max_records: Optional[int] = 2000) -> List[PokemonSpawn]:
+        return self.search_pokemon(
+            query="",
+            limit=limit,
+            iv_filter=100,
+            shiny_only=False,
+            pvp=0,
+            page_size=page_size,
+            max_records=max_records,
+        )
+
+    def list_current_zero_iv_spawns(self, limit: int = 250) -> List[PokemonSpawn]:
+        spawns = self._fetch_iv0_page()
+        exact_zero = [spawn for spawn in spawns if spawn.is_zero_iv]
+        return exact_zero[:limit]
