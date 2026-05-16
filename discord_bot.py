@@ -588,13 +588,13 @@ def main() -> None:
 
     timeout = _read_int_env("MOONANI_TIMEOUT", 20)
     page_size = _read_int_env("MOONANI_PAGE_SIZE", 100)
-    max_scan_records = _read_int_env("MOONANI_MAX_SCAN_RECORDS", 500)
+    max_scan_records = _read_int_env("MOONANI_MAX_SCAN_RECORDS", 10000)
     resolve_countries = _read_bool_env("MOONANI_RESOLVE_COUNTRIES", False)
     geocoder_endpoint = os.getenv("MOONANI_GEOCODER_ENDPOINT", "").strip()
     geocoder_user_agent = os.getenv("MOONANI_GEOCODER_USER_AGENT", "").strip() or "Lucario Discord Bot/1.0"
 
     settings_path = Path(os.getenv("LUCARIO_SETTINGS_PATH", "lucario_guild_settings.json")).resolve()
-    monitor_interval_seconds = _read_int_env("LUCARIO_MONITOR_INTERVAL_SECONDS", 120)
+    monitor_interval_seconds = _read_int_env("LUCARIO_MONITOR_INTERVAL_SECONDS", 45)
     alert_limit_hundo = _read_int_env("LUCARIO_ALERT_LIMIT_100IV", 250)
     alert_limit_zero = _read_int_env("LUCARIO_ALERT_LIMIT_0IV", 250)
 
