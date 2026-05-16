@@ -1,4 +1,5 @@
 import html
+import random
 import re
 import time
 import unicodedata
@@ -7,7 +8,6 @@ from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlencode
 
 import requests
-import cloudscraper
 
 
 DATA_CLIPBOARD_RE = re.compile(r'data-clipboard-text="([^"]+)"')
@@ -127,22 +127,58 @@ class MoonaniClient:
         self.geocoder_endpoint = geocoder_endpoint
         self.geocoder_user_agent = geocoder_user_agent
         self.session = cloudscraper.create_scraper(
-            browser={"browser": "chrome", "platform": "windows", "mobile": False}
-        )
-        self.session.headers.update(
-            {
-                "Referer": self.referer,
-                "Content-Type": "application/x-www-form-urlencoded",
+            browser={
+                "browser": "chrome",
+                "platform": "windows",
+                "mobile": False,
             }
         )
+
+        self.session.headers.update(
+            {
+                "User-Agent": (
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/136.0.0.0 Safari/537.36"
+                ),
+                "Accept": "application/json, text/javascript, */*; q=0.01",
+                "Accept-Language": "en-US,en;q=0.9,es;q=0.8",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Referer": self.referer,
+                "Origin": "https://moonani.com",
+                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                "X-Requested-With": "XMLHttpRequest",
+                "Connection": "keep-alive",
+                "DNT": "1",
+                "Sec-Fetch-Dest": "empty",
+                "Sec-Fetch-Mode": "cors",
+                "Sec-Fetch-Site": "same-origin",
+                "Cache-Control": "no-cache",
+                "Pragma": "no-cache",
+            }
+        )
+
+        self._warmup_session()
         self._page_cache = {}  # type: Dict[Tuple[int, int, int, int], Tuple[float, Dict[str, Any]]]
         self._country_cache = {}  # type: Dict[str, str]
         self._geocoder_backoff_until = 0.0
         self._iv0_cache = None  # type: Optional[Tuple[float, List[PokemonSpawn]]]
 
+    def _warmup_session(self) -> None:
+        try:
+            self.session.get(
+                "https://moonani.com/PokeList/index.php",
+                timeout=self.timeout,
+            )
+            time.sleep(random.uniform(2, 4))
+        except Exception:
+            pass
+
     def _fetch_page(self, start: int, length: int, iv_filter: int, pvp: int) -> Dict[str, Any]:
         cache_key = (start, length, iv_filter, pvp)
+
         now = time.monotonic()
+
         cached = self._page_cache.get(cache_key)
         if cached and now - cached[0] < self.cache_ttl_seconds:
             return cached[1]
@@ -156,23 +192,71 @@ class MoonaniClient:
             "draw": 1,
         }
 
-        response = self.session.post(self.endpoint, data=payload, timeout=self.timeout)
-        response.raise_for_status()
+        last_error = None
 
-        data = response.json()
-        if not isinstance(data, dict) or "data" not in data:
-            raise ValueError("Moonani respondio con un formato inesperado.")
+        for attempt in range(3):
+            try:
+                time.sleep(random.uniform(1.5, 4.0))
 
-        self._page_cache[cache_key] = (now, data)
-        return data
+                response = self.session.post(
+                    self.endpoint,
+                    data=payload,
+                    timeout=self.timeout,
+                )
+
+                if response.status_code == 403:
+                    print("403 detectado. Recalentando sesión...")
+                    self._warmup_session()
+                    time.sleep(random.uniform(4, 8))
+                    continue
+
+                response.raise_for_status()
+
+                data = response.json()
+
+                if not isinstance(data, dict) or "data" not in data:
+                    raise ValueError("Moonani respondió con un formato inesperado.")
+
+                self._page_cache[cache_key] = (now, data)
+
+                return data
+
+            except Exception as exc:
+                last_error = exc
+                time.sleep(random.uniform(2, 5))
+
+        raise last_error
 
     def _fetch_iv0_page(self) -> List[PokemonSpawn]:
         now = time.monotonic()
         if self._iv0_cache and now - self._iv0_cache[0] < self.cache_ttl_seconds:
             return self._iv0_cache[1]
 
-        response = self.session.get(self.iv0_page_url, timeout=self.timeout)
-        response.raise_for_status()
+        last_error = None
+
+        for attempt in range(3):
+            try:
+                time.sleep(random.uniform(1.5, 4.0))
+
+                response = self.session.get(
+                    self.iv0_page_url,
+                    timeout=self.timeout
+                )
+
+                if response.status_code == 403:
+                    print("403 detectado en IV0. Recalentando sesión...")
+                    self._warmup_session()
+                    time.sleep(random.uniform(4, 8))
+                    continue
+
+                response.raise_for_status()
+                break
+
+            except Exception as exc:
+                last_error = exc
+                time.sleep(random.uniform(2, 5))
+        else:
+            raise last_error
 
         spawns = self._parse_iv0_page(response.text)
         self._iv0_cache = (now, spawns)
