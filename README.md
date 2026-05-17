@@ -287,6 +287,18 @@ if __name__ == "__main__":
 python rocket_bot.py
 ```
 
+## Resultado esperado
+
+* Se realiza una petición HTTP directa a la página Rocket de Moonani.
+* Se procesa el HTML recibido utilizando BeautifulSoup.
+* Se extraen y limpian los datos embebidos en la tabla de Rockets.
+* Se detectan correctamente los tipos Rocket y los líderes Rocket (Arlo, Cliff, Sierra y Giovanni).
+* Se extraen las coordenadas desde los atributos `data-clipboard-text`.
+* Se obtienen correctamente los tiempos de inicio y finalización de cada Rocket.
+* Se imprime en consola una lista organizada con tipo Rocket, líder Rocket, coordenadas, país, tiempo de aparición, tiempo de expiración y enlace de Google Maps.
+* Esta prueba permite verificar técnicamente que la página responde correctamente y que el parseo base funciona antes de integrar la lógica en el bot de Discord.
+
+
 ## Imagen de referencia
 
 <p align="center">
