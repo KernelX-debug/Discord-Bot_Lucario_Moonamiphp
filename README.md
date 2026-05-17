@@ -1,4 +1,4 @@
-# 🤖 Lucario - Moonani Discord Pokemon Coordinates Bot
+# 🤖 Lucario - Moonani Discord Pokemon Go Coordinates Bot
 ![Discord](https://img.shields.io/badge/-Discord-5865F2?style=flat-square&logo=discord&logoColor=ffffff)
 ![Python](https://img.shields.io/badge/-Python-3776AB?style=flat-square&logo=python&logoColor=ffffff)
 
@@ -40,7 +40,7 @@ Bot de Discord en Python que consulta el endpoint de Moonani PokeList para obten
 - Python 3.13 recomendado
 - Un bot creado en el [Discord Developer Portal](https://discord.com/developers/applications)
 
-## Prueba de funcionamiento breve
+## Prueba de funcionamiento breve para pokemones
 
 Antes de usar el bot de Discord, es posible validar desde cero la extraccion y el parseo de datos del endpoint de Moonani con un script independiente. Esta prueba no requiere clonar el repositorio completo ni configurar Discord.
 
@@ -127,6 +127,162 @@ py -3.13 test_pokelist_limpio.py
 - Se limpia el HTML embebido en campos como Name, Coords y Country.
 - Se imprime en consola una lista de pokémones con nombre, coordenadas, CP, nivel, stats, tiempo de aparicion y enlace de Google Maps.
 - Esta prueba permite verificar de forma tecnica que el endpoint responde correctamente y que el parseo base funciona antes de integrar la logica en el bot de Discord.
+
+## Imagen de referencia
+
+<p align="center">
+  <img src="assets/testmoonami.png" alt="test de moonami" width="100%">
+</p>
+
+## Prueba de funcionamiento breve para rockets
+
+Antes de usar el bot de Discord, es posible validar desde cero la extraccion y el parseo de datos de Moonani con un script independiente. Esta prueba no requiere clonar el repositorio completo ni configurar Discord.
+
+### 1. Crear una carpeta de trabajo
+
+```powershell
+mkdir prueba_rockets_moonani
+cd prueba_rockets_moonani
+```
+
+### 2. Instalar dependencias necesarias
+
+```powershell
+pip install requests beautifulsoup4
+```
+
+### 3. Crear el archivo rocket_bot.py
+
+```powershell
+New-Item rocket_bot.py -ItemType File
+```
+
+### 4. Modifica el archivo en el bloc de notas nativo de windows
+
+```powershell
+notepad rocket_bot.py
+```
+
+**Pega el siguiente contenido:**
+
+```python
+import re
+import time
+import random
+import requests
+from bs4 import BeautifulSoup
+
+URL = "https://moonani.com/PokeList/rocket.php"
+
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/136.0.0.0 Safari/537.36"
+    ),
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer": "https://moonani.com/PokeList/",
+}
+
+COORDS_REGEX = re.compile(r"(-?\d+\.\d+,-?\d+\.\d+)")
+
+session = requests.Session()
+session.headers.update(HEADERS)
+
+
+def clean_text(value):
+    return value.strip().replace("\n", " ").replace("\t", " ")
+
+
+def get_rocket_data():
+    time.sleep(random.uniform(1.5, 3.5))
+
+    response = session.get(URL, timeout=20)
+
+    response.raise_for_status()
+
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    rockets = []
+
+    rows = soup.find_all("tr")
+
+    for row in rows:
+        cells = row.find_all("td")
+
+        # Saltar filas vacías o incompletas
+        if len(cells) < 7:
+            continue
+
+        try:
+            # Nombre/tipo rocket
+            rocket_type = clean_text(cells[0].get_text())
+
+            # Número ID
+            number = clean_text(cells[1].get_text())
+
+            # Coordenadas
+            coords_match = COORDS_REGEX.search(str(cells[2]))
+
+            if not coords_match:
+                continue
+
+            coords = coords_match.group(1)
+
+            # Start Time
+            start_time = clean_text(cells[4].get_text())
+
+            # End Time
+            end_time = clean_text(cells[5].get_text())
+
+            # País
+            country = clean_text(cells[6].get_text()).upper()
+
+            rockets.append(
+                {
+                    "rocket_type": rocket_type,
+                    "number": number,
+                    "coords": coords,
+                    "start_time": start_time,
+                    "end_time": end_time,
+                    "country": country,
+                    "maps_url": f"https://maps.google.com/?q={coords}",
+                }
+            )
+
+        except Exception:
+            continue
+
+    return rockets
+
+
+if __name__ == "__main__":
+    try:
+        rocket_data = get_rocket_data()
+
+        print(f"\nSe encontraron {len(rocket_data)} Rockets:\n")
+
+        for rocket in rocket_data:
+            print("=" * 60)
+            print(f"Tipo Rocket : {rocket['rocket_type']}")
+            print(f"Número      : {rocket['number']}")
+            print(f"Coords       : {rocket['coords']}")
+            print(f"Inicio       : {rocket['start_time']}")
+            print(f"Fin          : {rocket['end_time']}")
+            print(f"País         : {rocket['country']}")
+            print(f"Maps         : {rocket['maps_url']}")
+
+    except Exception as e:
+        print(f"Error: {e}")
+```
+
+**ES IMPORTANTE GUARDAR EL CONTENIDO DEL BLOC DE NOTAS CON `ctrl+g` O DESDE ARCHIVO/GUARDAR**
+
+### 5. Ejecuta el script de python
+
+```powershell
+python rocket_bot.py
+```
 
 ## Imagen de referencia
 
