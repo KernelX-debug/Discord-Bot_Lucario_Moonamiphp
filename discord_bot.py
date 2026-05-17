@@ -8,7 +8,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from moonani_client import MoonaniClient, PokemonSpawn
+from moonani_client import MoonaniClient, PokemonSpawn, RocketSpawn
 
 try:
     from dotenv import load_dotenv
@@ -73,7 +73,56 @@ def _chunk_lines(lines: Iterable[str], max_chars: int = 1800) -> List[str]:
     return chunks
 
 
-def _build_detail_embed(spawn: PokemonSpawn, source_label: str = "Moonani") -> discord.Embed:
+ROCKET_EMOJIS = {
+    "arlo": "🔴", "cliff": "🟠", "sierra": "💜", "giovanni": "👑",
+    "fire": "🔥", "ice": "❄️", "grass": "🌿", "electric": "⚡",
+    "water": "💧", "dark": "🌑", "psychic": "🔮", "flying": "🦅",
+    "ground": "🟫", "metal": "⚙️", "ghost": "👻", "bug": "🐛",
+    "fighting": "🥊", "poison": "☠️", "dragon": "🐉", "rock": "🪨",
+    "fairy": "🧚", "normal": "⭐", "steel": "🔩", "grunt": "👤",
+}
+
+ROCKET_CHOICES = [
+    app_commands.Choice(name="Todos",          value=""),
+    app_commands.Choice(name="👑 Giovanni",    value="giovanni"),
+    app_commands.Choice(name="🔴 Arlo",        value="arlo"),
+    app_commands.Choice(name="🟠 Cliff",       value="cliff"),
+    app_commands.Choice(name="💜 Sierra",      value="sierra"),
+    app_commands.Choice(name="🔥 Fire",        value="fire"),
+    app_commands.Choice(name="❄️ Ice",         value="ice"),
+    app_commands.Choice(name="🌿 Grass",       value="grass"),
+    app_commands.Choice(name="⚡ Electric",    value="electric"),
+    app_commands.Choice(name="💧 Water",       value="water"),
+    app_commands.Choice(name="🌑 Dark",        value="dark"),
+    app_commands.Choice(name="🔮 Psychic",     value="psychic"),
+    app_commands.Choice(name="🦅 Flying",      value="flying"),
+    app_commands.Choice(name="🟫 Ground",      value="ground"),
+    app_commands.Choice(name="⚙️ Metal",       value="metal"),
+    app_commands.Choice(name="👻 Ghost",       value="ghost"),
+    app_commands.Choice(name="🐛 Bug",         value="bug"),
+    app_commands.Choice(name="🥊 Fighting",    value="fighting"),
+    app_commands.Choice(name="☠️ Poison",      value="poison"),
+    app_commands.Choice(name="🐉 Dragon",      value="dragon"),
+    app_commands.Choice(name="🪨 Rock",        value="rock"),
+    app_commands.Choice(name="🧚 Fairy",       value="fairy"),
+    app_commands.Choice(name="⭐ Normal",      value="normal"),
+    app_commands.Choice(name="👤 Grunt",       value="grunt"),
+]
+
+
+def _build_rocket_embed(rocket: RocketSpawn) -> discord.Embed:
+    emoji = ROCKET_EMOJIS.get(rocket.rocket_type.lower(), "🚀")
+    color = discord.Color.from_rgb(30, 0, 60) if rocket.is_leader else discord.Color.dark_red()
+    title = f"{emoji} Líder {rocket.display_name}" if rocket.is_leader else f"{emoji} Rocket: {rocket.display_name}"
+
+    embed = discord.Embed(title=title, color=color)
+    embed.add_field(name="Coords", value=f"`{rocket.coords}`", inline=False)
+    embed.add_field(name="Mapa", value=f"[Abrir en Google Maps]({rocket.maps_url})", inline=False)
+    embed.add_field(name="Inicio", value=rocket.start_time, inline=True)
+    embed.add_field(name="Fin", value=rocket.end_time, inline=True)
+    embed.add_field(name="País", value=rocket.country.upper() if rocket.country else "??", inline=True)
+    embed.set_footer(text="Datos obtenidos por Lucario desde Moonani")
+    return embed
     if spawn.iv_percent == 100:
         color = discord.Color.gold()
     elif spawn.iv_percent == 0:
@@ -796,6 +845,63 @@ def register_commands(bot: LucarioDiscordBot) -> None:
 
         embed.set_footer(text=f"{len(watches)} seguimiento(s) activo(s) | Solo Pokémon 100 IV")
         await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @bot.tree.command(name="rocket", description="Busca Rockets en Moonani por tipo o líder.")
+    @app_commands.describe(
+        tipo="Tipo o líder Rocket a buscar",
+        cantidad="Cuántos resultados mostrar (1-10)",
+    )
+    @app_commands.choices(tipo=ROCKET_CHOICES)
+    async def rocket(
+        interaction: discord.Interaction,
+        tipo: Optional[app_commands.Choice[str]] = None,
+        cantidad: int = 5,
+    ) -> None:
+        if not 1 <= cantidad <= 10:
+            await interaction.response.send_message("`cantidad` debe estar entre 1 y 10.", ephemeral=True)
+            return
+
+        await interaction.response.defer(thinking=True)
+
+        type_filter = tipo.value if tipo else ""
+
+        try:
+            results = await _run_blocking(
+                bot.moonani.search_rockets,
+                type_filter,
+                cantidad,
+            )
+        except Exception as exc:
+            await interaction.followup.send(
+                f"No pude consultar Rockets en Moonani: `{type(exc).__name__}: {exc}`"
+            )
+            return
+
+        if not results:
+            label = tipo.name if tipo else "Rockets"
+            await interaction.followup.send(f"No encontré **{label}** activos en este momento.")
+            return
+
+        if len(results) == 1:
+            await interaction.followup.send(embed=_build_rocket_embed(results[0]))
+            return
+
+        label = tipo.name if tipo else "Rockets"
+        embed = discord.Embed(
+            title=f"🚀 {label} — {len(results)} resultado(s)",
+            color=discord.Color.dark_red(),
+        )
+        lines = []
+        for i, r in enumerate(results, start=1):
+            emoji = ROCKET_EMOJIS.get(r.rocket_type.lower(), "🚀")
+            lines.append(
+                f"**{i}. {emoji} {r.display_name}**\n"
+                f"Coords: `{r.coords}` | [Maps]({r.maps_url})\n"
+                f"Inicio: {r.start_time} | Fin: {r.end_time} | País: {r.country.upper() if r.country else '??'}"
+            )
+        embed.description = "\n\n".join(lines)
+        embed.set_footer(text="Datos obtenidos por Lucario desde Moonani")
+        await interaction.followup.send(embed=embed)
 
     @bot.tree.error
     async def on_app_command_error(interaction: discord.Interaction, error: app_commands.AppCommandError) -> None:
