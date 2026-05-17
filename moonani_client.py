@@ -18,6 +18,9 @@ TABLE_BODY_RE = re.compile(r"<tbody>(.*?)</tbody>", re.IGNORECASE | re.DOTALL)
 TABLE_ROW_RE = re.compile(r"<tr>(.*?)</tr>", re.IGNORECASE | re.DOTALL)
 TABLE_CELL_RE = re.compile(r"<td>(.*?)</td>", re.IGNORECASE | re.DOTALL)
 
+ROCKET_LEADERS = frozenset({"arlo", "cliff", "sierra", "giovanni"})
+ROCKET_TYPE_IMG_RE = re.compile(r"rockets/type_([a-zA-Z]+)\.png", re.IGNORECASE)
+
 
 @dataclass
 class PokemonSpawn:
@@ -57,6 +60,34 @@ class PokemonSpawn:
                 str(self.hp),
             ]
         )
+
+
+@dataclass
+class RocketSpawn:
+    rocket_id: str
+    rocket_type: str    # "Fire", "Ice", "Giovanni", "Arlo", etc.
+    rocket_leader: str  # "Arlo" / "Cliff" / "Sierra" / "Giovanni" o ""
+    count: int
+    coords: str
+    start_time: str
+    end_time: str
+    country: str
+
+    @property
+    def is_leader(self) -> bool:
+        return self.rocket_type.lower() in ROCKET_LEADERS
+
+    @property
+    def display_name(self) -> str:
+        return self.rocket_leader if self.rocket_leader else self.rocket_type
+
+    @property
+    def maps_url(self) -> str:
+        return f"https://maps.google.com/?q={self.coords}"
+
+    @property
+    def unique_key(self) -> str:
+        return "|".join([self.rocket_id, self.coords, self.start_time])
 
 
 def _strip_html(value: str) -> str:
@@ -137,6 +168,7 @@ class MoonaniClient:
         self._country_cache = {}  # type: Dict[str, str]
         self._geocoder_backoff_until = 0.0
         self._iv0_cache = None  # type: Optional[Tuple[float, List[PokemonSpawn]]]
+        self._rocket_cache = {}  # type: Dict[str, Tuple[float, List[RocketSpawn]]]
 
     def _fetch_page(self, start: int, length: int, iv_filter: int, pvp: int) -> Dict[str, Any]:
         cache_key = (start, length, iv_filter, pvp)
@@ -155,12 +187,6 @@ class MoonaniClient:
         }
 
         response = self.session.post(self.endpoint, data=payload, timeout=self.timeout)
-
-        if not response.ok:
-            print(f"[Moonani] HTTP {response.status_code} en POST ajax.php")
-            print(f"[Moonani] Headers respuesta: {dict(response.headers)}")
-            print(f"[Moonani] Cuerpo respuesta (primeros 500 chars): {response.text[:500]}")
-
         response.raise_for_status()
 
         data = response.json()
@@ -176,12 +202,6 @@ class MoonaniClient:
             return self._iv0_cache[1]
 
         response = self.session.get(self.iv0_page_url, timeout=self.timeout)
-
-        if not response.ok:
-            print(f"[Moonani] HTTP {response.status_code} en GET iv0.php")
-            print(f"[Moonani] Headers respuesta: {dict(response.headers)}")
-            print(f"[Moonani] Cuerpo respuesta (primeros 500 chars): {response.text[:500]}")
-
         response.raise_for_status()
 
         spawns = self._parse_iv0_page(response.text)
@@ -378,3 +398,82 @@ class MoonaniClient:
         spawns = self._fetch_iv0_page()
         exact_zero = [spawn for spawn in spawns if spawn.is_zero_iv]
         return exact_zero[:limit]
+
+    # ── Rockets ──────────────────────────────────────────────────────────────
+
+    def _fetch_rocket_page(self, type_filter: str = "") -> List[RocketSpawn]:
+        cache_key = type_filter.lower().strip()
+        now = time.monotonic()
+        cached = self._rocket_cache.get(cache_key)
+        if cached and now - cached[0] < self.cache_ttl_seconds:
+            return cached[1]
+
+        url = "https://moonani.com/PokeList/rocket.php"
+        if type_filter:
+            url = f"{url}?type={cache_key}"
+
+        response = self.session.get(url, timeout=self.timeout)
+
+        if not response.ok:
+            print(f"[Moonani] HTTP {response.status_code} en GET rocket.php")
+            print(f"[Moonani] Cuerpo (500 chars): {response.text[:500]}")
+
+        response.raise_for_status()
+
+        spawns = self._parse_rocket_page(response.text)
+        self._rocket_cache[cache_key] = (now, spawns)
+        return spawns
+
+    def _parse_rocket_page(self, page_html: str) -> List[RocketSpawn]:
+        body_match = TABLE_BODY_RE.search(page_html)
+        if not body_match:
+            raise ValueError("No pude encontrar la tabla de Rockets en Moonani.")
+
+        rows_html = body_match.group(1)
+        spawns = []  # type: List[RocketSpawn]
+
+        for row_html in TABLE_ROW_RE.findall(rows_html):
+            # Elimina celdas comentadas (hash ID)
+            clean_row = re.sub(r"<!--.*?-->", "", row_html, flags=re.DOTALL)
+            cells = TABLE_CELL_RE.findall(clean_row)
+            if len(cells) < 8:
+                continue
+
+            coords = _extract_coords(cells[3])
+            if not coords:
+                continue
+
+            # Tipo extraído del nombre de imagen (más confiable que el texto)
+            type_match = ROCKET_TYPE_IMG_RE.search(cells[1])
+            if type_match:
+                rocket_type = type_match.group(1).capitalize()
+            else:
+                rocket_type = re.sub(
+                    r'[/"\']+', "",
+                    HTML_TAG_RE.sub("", html.unescape(cells[1]))
+                ).strip()
+
+            rocket_leader = rocket_type if rocket_type.lower() in ROCKET_LEADERS else ""
+
+            spawns.append(RocketSpawn(
+                rocket_id=_strip_html(cells[0]),
+                rocket_type=rocket_type,
+                rocket_leader=rocket_leader,
+                count=_safe_int(_strip_html(cells[2])),
+                coords=coords,
+                start_time=_strip_html(cells[5]),
+                end_time=_strip_html(cells[6]),
+                country=_extract_country(cells[7]),
+            ))
+
+        return spawns
+
+    def search_rockets(
+        self,
+        type_filter: str = "",
+        limit: int = 5,
+    ) -> List[RocketSpawn]:
+        if limit < 1:
+            raise ValueError("El limite debe ser mayor que cero.")
+        spawns = self._fetch_rocket_page(type_filter=type_filter)
+        return spawns[:limit]
