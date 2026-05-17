@@ -2,7 +2,7 @@
 ![Discord](https://img.shields.io/badge/-Discord-5865F2?style=flat-square&logo=discord&logoColor=ffffff)
 ![Python](https://img.shields.io/badge/-Python-3776AB?style=flat-square&logo=python&logoColor=ffffff)
 
-Bot de Discord en Python que consulta el endpoint de Moonani PokeList para obtener apariciones de Pokemon iv100, extrae coordenadas y las publica en Discord mediante comandos.
+Bot de Discord en Python que consulta el endpoint de Moonani PokeList para obtener apariciones de Pokemon iv100 y iv0; extrae coordenadas y las publica en Discord mediante comandos.
 
 ## Que hace este proyecto. ¿A que quiero llegar?
 
@@ -10,7 +10,7 @@ Bot de Discord en Python que consulta el endpoint de Moonani PokeList para obten
 - Limpia el HTML que devuelve Moonani en campos como nombre, IV, coordenadas y pais
 - Extrae coordenadas listas para copiar y pegar, además de link redirigido a google maps.
 - Permite buscar por nombre parcial
-- De momento solo filtra los pokemones iv100
+- De momento solo filtra los pokemones iv100 y iv0
 - Responde en Discord con mensajes compactos
 
 ## Estructura del proyecto
@@ -21,11 +21,17 @@ Bot de Discord en Python que consulta el endpoint de Moonani PokeList para obten
 - `.env`: variables de entorno (No compartir estos datos con terceros)
 - `requirements.txt`: dependencias del proyecto
 
-## Comandos disponibles
-
+## Comandos disponibles en discord
+**Comandos para todos los usuarios de discord**
 - `/ping`: verifica si el bot esta en linea
-- `/pokemon`: muestra resultados con formato enriquecido
-- `/coords`: devuelve coordenadas en formato compacto para copiar
+- `/pokemon`: muestra resultados con formato enriquecido para pokemones iv100
+- `/pokemon0`: muestra resultados en formato enriquecido para pokemones iv0
+- `/coords`: devuelve coordenadas en formato compacto para copiar para pokemones iv100
+- `/coords0`: devuelve coordenadas en formato compacto para copiar para pokemones iv0
+**Comandos para uso administrativo en discord (permisos de administrador)**
+- `/configurar_canal`: permite configurar un canal específico para enviar alertas de pokemones iv100/iv0 de forma constante y actualizada
+- `/quitar_canal`: permite quitar el canal configurado para las alertas de pokemones iv100/iv0
+- `/ver_canales`: muestra los canales configurados para alertas automáticas
 
 ## Requisitos
 
@@ -43,7 +49,7 @@ mkdir prueba_moonani
 cd prueba_moonani
 ```
 ### 2. Crear el archivo test_pokelist_limpio.py
-Crea un archivo llamado test_pokelist_limpio.py con este contenido:
+Crea un archivo llamado `test_pokelist_limpio.py` con este contenido:
 
 ```python
 import requests
@@ -176,7 +182,10 @@ LUCARIO_ALERT_LIMIT_0IV=250
 - `MOONANI_RESOLVE_COUNTRIES`: intenta dar el pais desde coordenadas cuando Moonani no lo devuelve (EN MANTENIMIENTO POR LÍMITE DE SOLICITUDES{e409}, USAR "false" POR DEFECTO)
 - `MOONANI_GEOCODER_ENDPOINT`: endpoint de reverse geocoding
 - `MOONANI_GEOCODER_USER_AGENT`: identificador HTTP para el geocoder
-
+- `LUCARIO_SETTINGS_PATH=lucario_guild_settings.json`: variables del id de servidor y canales de discord asignados para enviar coordenadas iv100/iv0
+- `LUCARIO_MONITOR_INTERVAL_SECONDS=45`: polling constante definido en 45seconds
+- `LUCARIO_ALERT_LIMIT_100IV=250`: límite de alertas de 100iv por momentos.
+- `LUCARIO_ALERT_LIMIT_0IV=250`: límite de alertas de 0iv por momentos.
 ## Ejecucion
 
 ```powershell
