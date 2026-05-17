@@ -155,6 +155,12 @@ class MoonaniClient:
         }
 
         response = self.session.post(self.endpoint, data=payload, timeout=self.timeout)
+
+        if not response.ok:
+            print(f"[Moonani] HTTP {response.status_code} en POST ajax.php")
+            print(f"[Moonani] Headers respuesta: {dict(response.headers)}")
+            print(f"[Moonani] Cuerpo respuesta (primeros 500 chars): {response.text[:500]}")
+
         response.raise_for_status()
 
         data = response.json()
@@ -170,6 +176,12 @@ class MoonaniClient:
             return self._iv0_cache[1]
 
         response = self.session.get(self.iv0_page_url, timeout=self.timeout)
+
+        if not response.ok:
+            print(f"[Moonani] HTTP {response.status_code} en GET iv0.php")
+            print(f"[Moonani] Headers respuesta: {dict(response.headers)}")
+            print(f"[Moonani] Cuerpo respuesta (primeros 500 chars): {response.text[:500]}")
+
         response.raise_for_status()
 
         spawns = self._parse_iv0_page(response.text)
