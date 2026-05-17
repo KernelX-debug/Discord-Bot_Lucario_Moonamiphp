@@ -34,6 +34,9 @@ Bot de Discord en Python que consulta el endpoint de Moonani PokeList para obten
 - `/configurar_canal`: permite configurar un canal específico para enviar alertas de pokemones iv100/iv0 de forma constante y actualizada
 - `/quitar_canal`: permite quitar el canal configurado para las alertas de pokemones iv100/iv0
 - `/ver_canales`: muestra los canales configurados para alertas automáticas
+- `/agregar_seguimiento`: agrega alertas de un pokemón específico iv100 en un canal
+- `/quitar_seguimiento`: quitar alertas de un pokemón específico iv100 del canal
+- `/ver_seguimiento`: ver todos los seguimientos de pokémon iv100 configurados
 
 ## Requisitos
 
@@ -287,7 +290,7 @@ python rocket_bot.py
 ## Imagen de referencia
 
 <p align="center">
-  <img src="assets/testmoonami.png" alt="test de moonami" width="100%">
+  <img src="assets/testrocket.png" alt="test de rocket" width="100%">
 </p>
 
 ## Instalacion para uso como bot de discord
@@ -299,10 +302,10 @@ cd Discord-Bot_Lucario_Moonamiphp
 ```
 ### Modificar archivos e instalar dependencias
 
-1. Entra a la carpeta del proyecto.
+1. En la carpeta del proyecto.
 
 ```powershell
-cd ruta\de\tu\proyecto
+cd Discord-Bot_Lucario_Moonamiphp
 ```
 
 2. Instala las dependencias.
@@ -373,8 +376,8 @@ py -3.13 discord_bot.py
 
 ## Mejoras futuras
 
-- Agregar busqueda por numero de Pokedex y por rango de CP
-- Utilizando el endpoint se puede acceder a más filtros de pokemones, sean para liga de combates o 0iv
+- Agregar búsqueda de misiones/recompensa pokemón
+- Utilizando el endpoint se puede acceder a más filtros de pokemones como los perfet league R1
 - En proceso....
 
 ## Notas
