@@ -19,6 +19,7 @@ except ImportError:  # pragma: no cover
 HUNDO_KIND = "100iv"
 ZERO_KIND = "0iv"
 WATCH_KIND_PREFIX = "watch"
+SPAWN_COOLDOWN_SECONDS = 90 * 60  # 90 minutos — tiempo máximo de un spawn salvaje
 ALERT_KIND_LABELS = {
     HUNDO_KIND: "100 IV",
     ZERO_KIND: "0 IV",
@@ -177,6 +178,7 @@ class LucarioDiscordBot(commands.Bot):
         self.alert_limit_zero = alert_limit_zero
         self.guild_settings = self._load_settings()
         self.seen_spawns = {}  # type: Dict[Tuple[int, str], Set[str]]
+        self.cooldown_cache = {}  # type: Dict[Tuple[int, str, str], float]  # (guild_id, number, coords) → tiempo
         self.monitor_task = None  # type: Optional[asyncio.Task]
 
     def _load_settings(self) -> Dict[str, Dict[str, Optional[int]]]:
@@ -293,6 +295,32 @@ class LucarioDiscordBot(commands.Bot):
             return
         self.seen_spawns[seen_key] = {spawn.unique_key for spawn in current_spawns}
 
+    # ── Cooldown por coordenadas ──────────────────────────────────────────────
+
+    def _is_on_cooldown(self, guild_id: int, spawn) -> bool:
+        """Devuelve True si este Pokémon en estas coords ya fue enviado
+        hace menos de SPAWN_COOLDOWN_SECONDS en este servidor."""
+        key = (guild_id, spawn.number, spawn.coords)
+        last_sent = self.cooldown_cache.get(key)
+        if last_sent is None:
+            return False
+        return (time.monotonic() - last_sent) < SPAWN_COOLDOWN_SECONDS
+
+    def _mark_cooldown(self, guild_id: int, spawn) -> None:
+        """Registra el momento en que se envió este Pokémon en estas coords."""
+        key = (guild_id, spawn.number, spawn.coords)
+        self.cooldown_cache[key] = time.monotonic()
+
+    def _purge_cooldown_cache(self) -> None:
+        """Elimina entradas expiradas del cooldown cache para no crecer sin límite."""
+        now = time.monotonic()
+        expired = [
+            k for k, t in self.cooldown_cache.items()
+            if (now - t) > SPAWN_COOLDOWN_SECONDS
+        ]
+        for k in expired:
+            del self.cooldown_cache[k]
+
     async def _fetch_current_spawns(self, alert_kind: str) -> List[PokemonSpawn]:
         if alert_kind == HUNDO_KIND:
             return await _run_blocking(
@@ -341,6 +369,7 @@ class LucarioDiscordBot(commands.Bot):
         await self.wait_until_ready()
 
         while not self.is_closed():
+            self._purge_cooldown_cache()
             for guild_key, settings in list(self.guild_settings.items()):
                 try:
                     guild_id = int(guild_key)
@@ -370,12 +399,16 @@ class LucarioDiscordBot(commands.Bot):
 
                     new_spawns = [spawn for spawn in current_spawns if spawn.unique_key not in seen]
                     for spawn in new_spawns:
+                        if self._is_on_cooldown(guild_id, spawn):
+                            seen.add(spawn.unique_key)
+                            continue
                         try:
                             await channel.send(embed=_build_alert_embed(spawn, alert_kind))
                         except Exception as exc:  # pragma: no cover
                             print(f"No pude enviar alerta {alert_kind} al canal {channel_id}: {exc}")
                             break
                         seen.add(spawn.unique_key)
+                        self._mark_cooldown(guild_id, spawn)
 
                     for spawn in current_spawns:
                         seen.add(spawn.unique_key)
@@ -414,6 +447,9 @@ class LucarioDiscordBot(commands.Bot):
 
                     new_watch_spawns = [s for s in watch_spawns if s.unique_key not in watch_seen]
                     for spawn in new_watch_spawns:
+                        if self._is_on_cooldown(guild_id, spawn):
+                            watch_seen.add(spawn.unique_key)
+                            continue
                         try:
                             embed = _build_detail_embed(spawn, source_label="Moonani")
                             embed.title = f"🎯 Seguimiento: {spawn.name} (#{spawn.number})"
@@ -422,6 +458,7 @@ class LucarioDiscordBot(commands.Bot):
                             print(f"No pude enviar alerta de seguimiento '{pokemon_name}' al canal {watch_channel_id}: {exc}")
                             break
                         watch_seen.add(spawn.unique_key)
+                        self._mark_cooldown(guild_id, spawn)
 
                     for spawn in watch_spawns:
                         watch_seen.add(spawn.unique_key)
