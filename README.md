@@ -28,7 +28,9 @@ Bot de Discord en Python que consulta el endpoint de Moonani PokeList para obten
 - `/pokemon0`: muestra resultados en formato enriquecido para pokemones iv0
 - `/coords`: devuelve coordenadas en formato compacto para copiar para pokemones iv100
 - `/coords0`: devuelve coordenadas en formato compacto para copiar para pokemones iv0
+
 **Comandos para uso administrativo en discord (permisos de administrador)**
+
 - `/configurar_canal`: permite configurar un canal específico para enviar alertas de pokemones iv100/iv0 de forma constante y actualizada
 - `/quitar_canal`: permite quitar el canal configurado para las alertas de pokemones iv100/iv0
 - `/ver_canales`: muestra los canales configurados para alertas automáticas
