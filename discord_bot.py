@@ -18,6 +18,7 @@ except ImportError:  # pragma: no cover
 
 HUNDO_KIND = "100iv"
 ZERO_KIND = "0iv"
+WATCH_KIND_PREFIX = "watch"
 ALERT_KIND_LABELS = {
     HUNDO_KIND: "100 IV",
     ZERO_KIND: "0 IV",
@@ -198,9 +199,15 @@ class LucarioDiscordBot(commands.Bot):
         for guild_key, settings in guilds.items():
             if not isinstance(settings, dict):
                 continue
+            raw_watches = settings.get("watches", [])
+            watches = [
+                w for w in raw_watches
+                if isinstance(w, dict) and w.get("pokemon") and w.get("channel_id")
+            ]
             normalized[str(guild_key)] = {
                 HUNDO_KIND: settings.get(HUNDO_KIND),
                 ZERO_KIND: settings.get(ZERO_KIND),
+                "watches": watches,
             }
         return normalized
 
@@ -208,13 +215,16 @@ class LucarioDiscordBot(commands.Bot):
         payload = {"guilds": self.guild_settings}
         self.settings_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
-    def _ensure_guild_settings(self, guild_id: int) -> Dict[str, Optional[int]]:
+    def _ensure_guild_settings(self, guild_id: int) -> Dict:
         guild_key = str(guild_id)
         if guild_key not in self.guild_settings:
             self.guild_settings[guild_key] = {
                 HUNDO_KIND: None,
                 ZERO_KIND: None,
+                "watches": [],
             }
+        # Garantiza que guilds antiguas también tengan la clave watches
+        self.guild_settings[guild_key].setdefault("watches", [])
         return self.guild_settings[guild_key]
 
     def get_channel_id(self, guild_id: int, alert_kind: str) -> Optional[int]:
@@ -231,6 +241,57 @@ class LucarioDiscordBot(commands.Bot):
         settings = self._ensure_guild_settings(guild_id)
         settings[alert_kind] = None
         self._save_settings()
+
+    # ── Métodos para gestionar seguimientos por Pokémon ──────────────────────
+
+    def get_watches(self, guild_id: int) -> List[Dict]:
+        settings = self._ensure_guild_settings(guild_id)
+        return list(settings.get("watches", []))
+
+    def add_watch(self, guild_id: int, pokemon: str, channel_id: int) -> None:
+        settings = self._ensure_guild_settings(guild_id)
+        pokemon_key = pokemon.lower().strip()
+        # Si ya existía un seguimiento del mismo Pokémon, lo reemplaza
+        settings["watches"] = [
+            w for w in settings.get("watches", [])
+            if w.get("pokemon", "").lower() != pokemon_key
+        ]
+        settings["watches"].append({"pokemon": pokemon.strip(), "channel_id": channel_id})
+        self._save_settings()
+
+    def remove_watch(self, guild_id: int, pokemon: str) -> bool:
+        settings = self._ensure_guild_settings(guild_id)
+        pokemon_key = pokemon.lower().strip()
+        before = len(settings.get("watches", []))
+        settings["watches"] = [
+            w for w in settings.get("watches", [])
+            if w.get("pokemon", "").lower() != pokemon_key
+        ]
+        removed = len(settings["watches"]) < before
+        if removed:
+            self._save_settings()
+            self.seen_spawns.pop((guild_id, f"{WATCH_KIND_PREFIX}:{pokemon_key}"), None)
+        return removed
+
+    async def _prime_watch_cache(self, guild_id: int, pokemon: str) -> None:
+        pokemon_key = pokemon.lower().strip()
+        seen_key = (guild_id, f"{WATCH_KIND_PREFIX}:{pokemon_key}")
+        try:
+            current_spawns = await _run_blocking(
+                self.moonani.search_pokemon,
+                pokemon_key,
+                self.alert_limit_hundo,
+                100,
+                False,
+                0,
+                self.page_size,
+                self.max_scan_records,
+            )
+        except Exception as exc:
+            print(f"No pude inicializar cache de seguimiento '{pokemon}' para guild {guild_id}: {exc}")
+            self.seen_spawns[seen_key] = set()
+            return
+        self.seen_spawns[seen_key] = {spawn.unique_key for spawn in current_spawns}
 
     async def _fetch_current_spawns(self, alert_kind: str) -> List[PokemonSpawn]:
         if alert_kind == HUNDO_KIND:
@@ -269,6 +330,12 @@ class LucarioDiscordBot(commands.Bot):
 
             await self._prime_seen_cache(guild_id, HUNDO_KIND)
             await self._prime_seen_cache(guild_id, ZERO_KIND)
+
+            # Inicializa cache para cada seguimiento guardado
+            for watch in self.guild_settings[guild_key].get("watches", []):
+                pokemon = watch.get("pokemon", "")
+                if pokemon:
+                    await self._prime_watch_cache(guild_id, pokemon)
 
     async def _monitor_alerts_loop(self) -> None:
         await self.wait_until_ready()
@@ -312,6 +379,52 @@ class LucarioDiscordBot(commands.Bot):
 
                     for spawn in current_spawns:
                         seen.add(spawn.unique_key)
+
+                # ── Seguimientos por Pokémon específico ──────────────────────
+                for watch in settings.get("watches", []):
+                    pokemon_name = watch.get("pokemon", "")
+                    watch_channel_id = watch.get("channel_id")
+                    if not pokemon_name or not watch_channel_id:
+                        continue
+
+                    watch_channel = self.get_channel(int(watch_channel_id))
+                    if watch_channel is None:
+                        try:
+                            watch_channel = await self.fetch_channel(int(watch_channel_id))
+                        except Exception:
+                            continue
+
+                    try:
+                        watch_spawns = await _run_blocking(
+                            self.moonani.search_pokemon,
+                            pokemon_name.lower().strip(),
+                            self.alert_limit_hundo,
+                            100,
+                            False,
+                            0,
+                            self.page_size,
+                            self.max_scan_records,
+                        )
+                    except Exception as exc:
+                        print(f"Error monitoreando seguimiento '{pokemon_name}' para guild {guild_id}: {exc}")
+                        continue
+
+                    watch_seen_key = (guild_id, f"{WATCH_KIND_PREFIX}:{pokemon_name.lower().strip()}")
+                    watch_seen = self.seen_spawns.setdefault(watch_seen_key, set())
+
+                    new_watch_spawns = [s for s in watch_spawns if s.unique_key not in watch_seen]
+                    for spawn in new_watch_spawns:
+                        try:
+                            embed = _build_detail_embed(spawn, source_label="Moonani")
+                            embed.title = f"🎯 Seguimiento: {spawn.name} (#{spawn.number})"
+                            await watch_channel.send(embed=embed)
+                        except Exception as exc:
+                            print(f"No pude enviar alerta de seguimiento '{pokemon_name}' al canal {watch_channel_id}: {exc}")
+                            break
+                        watch_seen.add(spawn.unique_key)
+
+                    for spawn in watch_spawns:
+                        watch_seen.add(spawn.unique_key)
 
             await asyncio.sleep(self.monitor_interval_seconds)
 
@@ -561,6 +674,90 @@ def register_commands(bot: LucarioDiscordBot) -> None:
         embed.add_field(name="100 IV", value=_format_channel(hundo_channel_id), inline=False)
         embed.add_field(name="0 IV", value=_format_channel(zero_channel_id), inline=False)
         embed.set_footer(text="Configuracion de alertas automaticas de Lucario")
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @bot.tree.command(name="agregar_seguimiento", description="Agrega alertas de un Pokémon específico (100 IV) en un canal.")
+    @app_commands.describe(
+        pokemon="Nombre del Pokémon a seguir (ej: Charmander)",
+        canal="Canal donde Lucario enviará las alertas de ese Pokémon",
+    )
+    @app_commands.default_permissions(manage_guild=True)
+    @app_commands.guild_only()
+    async def agregar_seguimiento(
+        interaction: discord.Interaction,
+        pokemon: str,
+        canal: discord.TextChannel,
+    ) -> None:
+        if interaction.guild_id is None:
+            await interaction.response.send_message("Este comando solo se puede usar dentro de un servidor.", ephemeral=True)
+            return
+
+        pokemon = pokemon.strip()
+        if not pokemon:
+            await interaction.response.send_message("Debes indicar el nombre del Pokémon.", ephemeral=True)
+            return
+
+        await interaction.response.defer(ephemeral=True, thinking=True)
+
+        bot.add_watch(interaction.guild_id, pokemon, canal.id)
+        await bot._prime_watch_cache(interaction.guild_id, pokemon)
+
+        await interaction.followup.send(
+            f"✅ Seguimiento de **{pokemon}** (100 IV) configurado en {canal.mention}.\n"
+            "Lucario avisará cada vez que aparezca un nuevo spawn.",
+            ephemeral=True,
+        )
+
+    @bot.tree.command(name="quitar_seguimiento", description="Quita el seguimiento de un Pokémon específico.")
+    @app_commands.describe(
+        pokemon="Nombre del Pokémon que ya no quieres seguir (ej: Charmander)",
+    )
+    @app_commands.default_permissions(manage_guild=True)
+    @app_commands.guild_only()
+    async def quitar_seguimiento(
+        interaction: discord.Interaction,
+        pokemon: str,
+    ) -> None:
+        if interaction.guild_id is None:
+            await interaction.response.send_message("Este comando solo se puede usar dentro de un servidor.", ephemeral=True)
+            return
+
+        removed = bot.remove_watch(interaction.guild_id, pokemon.strip())
+        if removed:
+            await interaction.response.send_message(
+                f"🗑️ Se quitó el seguimiento de **{pokemon}**.",
+                ephemeral=True,
+            )
+        else:
+            await interaction.response.send_message(
+                f"No había ningún seguimiento configurado para **{pokemon}**.",
+                ephemeral=True,
+            )
+
+    @bot.tree.command(name="ver_seguimientos", description="Muestra todos los seguimientos de Pokémon configurados.")
+    @app_commands.default_permissions(manage_guild=True)
+    @app_commands.guild_only()
+    async def ver_seguimientos(interaction: discord.Interaction) -> None:
+        if interaction.guild_id is None:
+            await interaction.response.send_message("Este comando solo se puede usar dentro de un servidor.", ephemeral=True)
+            return
+
+        watches = bot.get_watches(interaction.guild_id)
+
+        embed = discord.Embed(title="Seguimientos de Pokémon configurados", color=discord.Color.green())
+
+        if not watches:
+            embed.description = "No hay ningún seguimiento activo.\nUsa `/agregar_seguimiento` para añadir uno."
+        else:
+            lines = []
+            for w in watches:
+                poke = w.get("pokemon", "?")
+                ch_id = w.get("channel_id")
+                ch_mention = f"<#{ch_id}>" if ch_id else "Canal no encontrado"
+                lines.append(f"• **{poke}** → {ch_mention}")
+            embed.description = "\n".join(lines)
+
+        embed.set_footer(text=f"{len(watches)} seguimiento(s) activo(s) | Solo Pokémon 100 IV")
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @bot.tree.error
