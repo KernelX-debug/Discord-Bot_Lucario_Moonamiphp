@@ -371,6 +371,7 @@ py -3.13 discord_bot.py
 /pokemon nombre:wiglett cantidad:3
 /coords nombre:pikachu cantidad:5
 ```
+
 ## Funcionamiento
 
 <p align="center">
