@@ -53,8 +53,8 @@ Antes de usar el bot de Discord, es posible validar desde cero la extraccion y e
 mkdir prueba_moonani
 cd prueba_moonani
 ```
-### 2. Crear el archivo test_pokelist_limpio.py
-Crea un archivo llamado `test_pokelist_limpio.py` con este contenido:
+### 2. Crear el archivo pokemontest.py
+Crea un archivo llamado `pokemontest.py` con este contenido:
 
 ```python
 import requests
@@ -154,10 +154,10 @@ cd prueba_rockets_moonani
 pip install requests beautifulsoup4
 ```
 
-### 3. Crear el archivo rocket_bot.py
+### 3. Crear el archivo rockettest.py
 
 ```powershell
-New-Item rocket_bot.py -ItemType File
+New-Item rockettest.py -ItemType File
 ```
 
 ### 4. Modifica el archivo en el bloc de notas nativo de windows
