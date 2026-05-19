@@ -122,7 +122,7 @@ py -3.13 -m pip install requests
 ### 4. Ejecutar la prueba
 
 ```powershell
-py -3.13 test_pokelist_limpio.py
+py -3.13 pokemontest.py
 ```
 ## Resultado esperado
 - Se realiza una peticion HTTP directa al endpoint de Moonani.
@@ -163,7 +163,7 @@ New-Item rockettest.py -ItemType File
 ### 4. Modifica el archivo en el bloc de notas nativo de windows
 
 ```powershell
-notepad rocket_bot.py
+notepad rockettest.py
 ```
 
 **Pega el siguiente contenido:**
@@ -284,7 +284,7 @@ if __name__ == "__main__":
 ### 5. Ejecuta el script de python
 
 ```powershell
-python rocket_bot.py
+python rockettest.py
 ```
 
 ## Resultado esperado
