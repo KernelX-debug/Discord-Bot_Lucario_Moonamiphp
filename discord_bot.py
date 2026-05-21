@@ -10,7 +10,6 @@ from discord.ext import commands
 import requests
 
 from moonani_client import MoonaniClient, PokemonSpawn, RocketSpawn
-from questtest import obtener_quests
 from raidtest import get_raid_data
 
 try:
@@ -71,15 +70,6 @@ ROCKET_CHOICES = [
     app_commands.Choice(name="Normal", value="normal"),
     app_commands.Choice(name="Grunt", value="grunt"),
 ]
-
-QUEST_CHOICES = [
-    app_commands.Choice(name="Kecleon", value="kecleon"),
-    app_commands.Choice(name="Pikachu", value="pikachu"),
-    app_commands.Choice(name="Psyduck", value="psyduck"),
-    app_commands.Choice(name="Snorlax", value="snorlax"),
-    app_commands.Choice(name="Spinda", value="spinda"),
-]
-
 
 def _read_int_env(name: str, default: int) -> int:
     raw_value = os.getenv(name)
@@ -224,18 +214,6 @@ def _format_coords_line(index: int, spawn: PokemonSpawn) -> str:
         f"ATK:{spawn.attack} DEF:{spawn.defense} HP:{spawn.hp}\n"
         f"Inicio: {spawn.start_time or 'N/D'}\n"
         f"Fin: {spawn.end_time or 'N/D'} | Pais: {spawn.country or 'Unknown'}"
-    )
-
-
-def _format_quest_line(index: int, quest_item: Dict[str, str]) -> str:
-    return (
-        f"**{index}. {quest_item.get('pokemon', 'Quest')}** "
-        f"(#{quest_item.get('pokemon_id', 'N/D')})\n"
-        f"Quest: {quest_item.get('quest', 'N/D')}\n"
-        f"Coords: `{quest_item.get('coords', '')}`\n"
-        f"Maps: <{quest_item.get('maps', '')}>\n"
-        f"Inicio: {quest_item.get('inicio', 'N/D')}\n"
-        f"Fin: {quest_item.get('fin', 'N/D')} | Pais: {quest_item.get('pais', 'N/D')}"
     )
 
 
@@ -512,50 +490,6 @@ def register_commands(bot: LucarioDiscordBot) -> None:
         embed.description = "\n\n".join(lines)
         embed.set_footer(text="Datos obtenidos por Lucario desde Moonani")
         await interaction.followup.send(embed=embed)
-
-    @bot.tree.command(name="quest", description="Busca quests por Pokemon de recompensa.")
-    @app_commands.describe(
-        recompensa="Pokemon de recompensa permitido",
-        cantidad="Cuantos resultados mostrar (1-10)",
-    )
-    @app_commands.choices(recompensa=QUEST_CHOICES)
-    async def quest(
-        interaction: discord.Interaction,
-        recompensa: app_commands.Choice[str],
-        cantidad: int = 5,
-    ) -> None:
-        if not 1 <= cantidad <= 10:
-            await interaction.response.send_message("`cantidad` debe estar entre 1 y 10.", ephemeral=True)
-            return
-
-        await interaction.response.defer(thinking=True)
-
-        try:
-            quests = await _run_blocking(obtener_quests)
-        except Exception as exc:
-            await interaction.followup.send(f"No pude consultar quests en Moonani: {_format_moonani_error(exc)}")
-            return
-
-        reward_key = recompensa.value.lower().strip()
-        filtered = []
-        for quest_item in quests:
-            reward_name = str(quest_item.get("pokemon", "")).lower()
-            if reward_key == "spinda":
-                if "spinda" in reward_name:
-                    filtered.append(quest_item)
-            elif reward_key in reward_name:
-                filtered.append(quest_item)
-
-        filtered = filtered[:cantidad]
-        if not filtered:
-            await interaction.followup.send(f"No encontre quests activas para **{recompensa.name}**.")
-            return
-
-        lines = [_format_quest_line(index, quest_item) for index, quest_item in enumerate(filtered, start=1)]
-        chunks = _chunk_lines(lines)
-        for chunk_index, chunk in enumerate(chunks, start=1):
-            header = f"Bloque {chunk_index}/{len(chunks)}\n\n" if len(lines) > 1 else ""
-            await interaction.followup.send(f"{header}{chunk}")
 
     @bot.tree.command(name="raid", description="Consulta raids en Moonani y devuelve coordenadas.")
     @app_commands.describe(nombre="Filtro opcional por nombre del raid", cantidad="Cuantos resultados mostrar (1-10)")
