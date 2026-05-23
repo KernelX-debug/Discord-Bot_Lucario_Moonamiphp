@@ -1,2 +1,17 @@
-# Auto detect text files and perform LF normalization
+# Normalizar texto
 * text=auto
+
+# Python
+*.py text eol=lf
+
+# Shell
+*.sh text eol=lf
+
+# Windows
+*.bat text eol=crlf
+
+# Imágenes binarias
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
