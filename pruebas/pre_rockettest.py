@@ -30,7 +30,7 @@ session.headers.update(HEADERS)
 
 
 def get_rocket_data():
-    # Delay para parecer más humano
+
     time.sleep(random.uniform(1.5, 3.5))
 
     response = session.get(URL, timeout=20)
@@ -41,13 +41,11 @@ def get_rocket_data():
 
     rockets = []
 
-    # Buscar todas las filas de la tabla
     rows = soup.find_all("tr")
 
     for row in rows:
         row_text = row.get_text(" ", strip=True)
 
-        # Buscar coordenadas
         coords_match = COORDS_REGEX.search(str(row))
 
         if not coords_match:
@@ -55,7 +53,6 @@ def get_rocket_data():
 
         coords = coords_match.group(1)
 
-        # Detectar líder Rocket
         rocket_leader = None
 
         for name in ROCKET_NAMES:
@@ -63,7 +60,6 @@ def get_rocket_data():
                 rocket_leader = name
                 break
 
-        # Detectar tipo elemental
         rocket_type = None
 
         type_match = re.search(
@@ -75,7 +71,6 @@ def get_rocket_data():
         if type_match:
             rocket_type = type_match.group(1).title()
 
-        # Detectar país
         country = None
 
         flag_match = re.search(
