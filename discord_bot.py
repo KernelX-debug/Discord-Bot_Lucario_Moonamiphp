@@ -1,8 +1,9 @@
 import asyncio
 import json
 import os
+import unicodedata
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional
+from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 import discord
 from discord import app_commands
@@ -71,6 +72,10 @@ ROCKET_CHOICES = [
     app_commands.Choice(name="Grunt", value="grunt"),
 ]
 
+WATCH_KIND_PREFIX = "watch"
+WATCH_SPAWN_COOLDOWN_SECONDS = 90 * 60
+WATCH_ERROR_COOLDOWN_SECONDS = 30 * 60
+
 def _read_int_env(name: str, default: int) -> int:
     raw_value = os.getenv(name)
     if raw_value is None or not raw_value.strip():
@@ -98,6 +103,11 @@ def _format_moonani_error(exc: Exception) -> str:
             )
         return f"Moonani devolvio HTTP {exc.response.status_code}."
     return f"{type(exc).__name__}: {exc}"
+
+
+def _normalize_watch_name(value: str) -> str:
+    normalized = unicodedata.normalize("NFKD", (value or "").strip().lower())
+    return "".join(char for char in normalized if not unicodedata.combining(char))
 
 
 def _chunk_lines(lines: Iterable[str], max_chars: int = 1800) -> List[str]:
@@ -230,6 +240,8 @@ class LucarioDiscordBot(commands.Bot):
         page_size: int,
         max_scan_records: int,
         settings_path: Path,
+        watch_monitor_interval_seconds: int,
+        watch_scan_limit: int,
     ) -> None:
         intents = discord.Intents.default()
         super().__init__(command_prefix="!", intents=intents)
@@ -238,7 +250,13 @@ class LucarioDiscordBot(commands.Bot):
         self.page_size = page_size
         self.max_scan_records = max_scan_records
         self.settings_path = settings_path
+        self.watch_monitor_interval_seconds = watch_monitor_interval_seconds
+        self.watch_scan_limit = watch_scan_limit
         self.guild_settings = self._load_settings()
+        self.watch_seen_cache = {}  # type: Dict[Tuple[int, str], Set[str]]
+        self.watch_cooldown_cache = {}  # type: Dict[Tuple[int, str, str], float]
+        self.watch_error_cooldown_cache = {}  # type: Dict[int, float]
+        self.monitor_task = None  # type: Optional[asyncio.Task]
 
     def _load_settings(self) -> Dict[str, Dict[str, List[Dict[str, object]]]]:
         if not self.settings_path.exists():
@@ -287,26 +305,183 @@ class LucarioDiscordBot(commands.Bot):
 
     def add_watch(self, guild_id: int, pokemon: str, channel_id: int) -> None:
         settings = self._ensure_guild_settings(guild_id)
-        pokemon_key = pokemon.lower().strip()
+        pokemon_key = _normalize_watch_name(pokemon)
         settings["watches"] = [
             w for w in settings.get("watches", [])
-            if str(w.get("pokemon", "")).lower() != pokemon_key
+            if _normalize_watch_name(str(w.get("pokemon", ""))) != pokemon_key
         ]
         settings["watches"].append({"pokemon": pokemon.strip(), "channel_id": channel_id})
+        self.watch_seen_cache.pop((guild_id, f"{WATCH_KIND_PREFIX}:{pokemon_key}"), None)
         self._save_settings()
 
     def remove_watch(self, guild_id: int, pokemon: str) -> bool:
         settings = self._ensure_guild_settings(guild_id)
-        pokemon_key = pokemon.lower().strip()
+        pokemon_key = _normalize_watch_name(pokemon)
         before = len(settings.get("watches", []))
         settings["watches"] = [
             w for w in settings.get("watches", [])
-            if str(w.get("pokemon", "")).lower() != pokemon_key
+            if _normalize_watch_name(str(w.get("pokemon", ""))) != pokemon_key
         ]
         removed = len(settings["watches"]) < before
         if removed:
+            self.watch_seen_cache.pop((guild_id, f"{WATCH_KIND_PREFIX}:{pokemon_key}"), None)
             self._save_settings()
         return removed
+
+    def _collect_watch_names(self) -> List[str]:
+        names = set()
+        for settings in self.guild_settings.values():
+            for watch in settings.get("watches", []):
+                pokemon = _normalize_watch_name(str(watch.get("pokemon", "")))
+                if pokemon:
+                    names.add(pokemon)
+        return sorted(names)
+
+    def _purge_watch_caches(self) -> None:
+        now = asyncio.get_running_loop().time()
+        expired_spawn_keys = [
+            key for key, timestamp in self.watch_cooldown_cache.items()
+            if (now - timestamp) > WATCH_SPAWN_COOLDOWN_SECONDS
+        ]
+        for key in expired_spawn_keys:
+            del self.watch_cooldown_cache[key]
+
+        expired_error_keys = [
+            key for key, timestamp in self.watch_error_cooldown_cache.items()
+            if (now - timestamp) > WATCH_ERROR_COOLDOWN_SECONDS
+        ]
+        for key in expired_error_keys:
+            del self.watch_error_cooldown_cache[key]
+
+    def _is_watch_on_cooldown(self, guild_id: int, spawn: PokemonSpawn) -> bool:
+        key = (guild_id, spawn.number, spawn.coords)
+        last_sent = self.watch_cooldown_cache.get(key)
+        if last_sent is None:
+            return False
+        return (asyncio.get_running_loop().time() - last_sent) < WATCH_SPAWN_COOLDOWN_SECONDS
+
+    def _mark_watch_cooldown(self, guild_id: int, spawn: PokemonSpawn) -> None:
+        key = (guild_id, spawn.number, spawn.coords)
+        self.watch_cooldown_cache[key] = asyncio.get_running_loop().time()
+
+    async def _fetch_watch_source_spawns(self) -> List[PokemonSpawn]:
+        return await _run_blocking(
+            self.moonani.search_pokemon,
+            "",
+            self.watch_scan_limit,
+            100,
+            False,
+            0,
+            self.watch_scan_limit,
+            self.watch_scan_limit,
+        )
+
+    async def _resolve_text_channel(self, channel_id: int) -> Optional[discord.TextChannel]:
+        channel = self.get_channel(channel_id)
+        if isinstance(channel, discord.TextChannel):
+            return channel
+
+        try:
+            fetched_channel = await self.fetch_channel(channel_id)
+        except Exception:
+            return None
+
+        if isinstance(fetched_channel, discord.TextChannel):
+            return fetched_channel
+        return None
+
+    async def _notify_watch_error(self, channel_id: int, exc: Exception) -> None:
+        now = asyncio.get_running_loop().time()
+        if (now - self.watch_error_cooldown_cache.get(channel_id, 0.0)) < WATCH_ERROR_COOLDOWN_SECONDS:
+            return
+
+        channel = await self._resolve_text_channel(channel_id)
+        if channel is None:
+            return
+
+        try:
+            await channel.send(
+                "No pude revisar los seguimientos de 100 IV en este momento.\n"
+                f"Motivo: {_format_moonani_error(exc)}"
+            )
+        except Exception:
+            return
+
+        self.watch_error_cooldown_cache[channel_id] = now
+
+    async def _monitor_watch_loop(self) -> None:
+        await self.wait_until_ready()
+        await asyncio.sleep(self.watch_monitor_interval_seconds)
+
+        while not self.is_closed():
+            watch_names = self._collect_watch_names()
+            if not watch_names:
+                await asyncio.sleep(self.watch_monitor_interval_seconds)
+                continue
+
+            self._purge_watch_caches()
+
+            try:
+                current_spawns = await self._fetch_watch_source_spawns()
+            except Exception as exc:
+                notified_channels = set()
+                for settings in self.guild_settings.values():
+                    for watch in settings.get("watches", []):
+                        channel_id = int(watch.get("channel_id", 0))
+                        if channel_id and channel_id not in notified_channels:
+                            await self._notify_watch_error(channel_id, exc)
+                            notified_channels.add(channel_id)
+                await asyncio.sleep(self.watch_monitor_interval_seconds)
+                continue
+
+            normalized_matches = {}  # type: Dict[str, List[PokemonSpawn]]
+            for watch_name in watch_names:
+                normalized_matches[watch_name] = []
+
+            for spawn in current_spawns:
+                normalized_name = _normalize_watch_name(spawn.name)
+                for watch_name in watch_names:
+                    if watch_name and watch_name in normalized_name:
+                        normalized_matches[watch_name].append(spawn)
+
+            for guild_key, settings in list(self.guild_settings.items()):
+                try:
+                    guild_id = int(guild_key)
+                except ValueError:
+                    continue
+
+                for watch in settings.get("watches", []):
+                    pokemon_name = str(watch.get("pokemon", "")).strip()
+                    channel_id = int(watch.get("channel_id", 0))
+                    if not pokemon_name or not channel_id:
+                        continue
+
+                    channel = await self._resolve_text_channel(channel_id)
+                    if channel is None:
+                        continue
+
+                    pokemon_key = _normalize_watch_name(pokemon_name)
+                    seen_key = (guild_id, f"{WATCH_KIND_PREFIX}:{pokemon_key}")
+                    seen = self.watch_seen_cache.setdefault(seen_key, set())
+                    watch_spawns = normalized_matches.get(pokemon_key, [])
+
+                    for spawn in watch_spawns:
+                        if spawn.unique_key in seen:
+                            continue
+                        if self._is_watch_on_cooldown(guild_id, spawn):
+                            seen.add(spawn.unique_key)
+                            continue
+                        try:
+                            await channel.send(embed=_build_detail_embed(spawn, "Moonani"))
+                        except Exception as exc:
+                            print(f"No pude enviar alerta de seguimiento '{pokemon_name}' al canal {channel_id}: {exc}")
+                            break
+                        seen.add(spawn.unique_key)
+                        self._mark_watch_cooldown(guild_id, spawn)
+
+                    self.watch_seen_cache[seen_key] = {spawn.unique_key for spawn in watch_spawns}
+
+            await asyncio.sleep(self.watch_monitor_interval_seconds)
 
     async def setup_hook(self) -> None:
         if self.guild_id:
@@ -320,6 +495,8 @@ class LucarioDiscordBot(commands.Bot):
         else:
             synced = await self.tree.sync()
             print(f"Comandos slash globales sincronizados: {len(synced)}")
+
+        self.monitor_task = asyncio.create_task(self._monitor_watch_loop())
 
 
 def register_commands(bot: LucarioDiscordBot) -> None:
@@ -462,9 +639,25 @@ def register_commands(bot: LucarioDiscordBot) -> None:
 
         await interaction.response.defer(ephemeral=True, thinking=True)
         bot.add_watch(interaction.guild_id, pokemon, canal.id)
+        channel_notice_sent = False
+        try:
+            await canal.send(
+                f"Lucario activo el seguimiento de **{pokemon}** en este canal.\n"
+                "Revisare Moonani periodicamente y avisare aqui cuando encuentre 100 IV que coincidan."
+            )
+            channel_notice_sent = True
+        except Exception as exc:
+            print(f"No pude publicar la activacion del seguimiento '{pokemon}' en el canal {canal.id}: {exc}")
         await interaction.followup.send(
-            f"Seguimiento guardado para **{pokemon}** en {canal.mention}.\n"
-            "En esta version solo se guarda la configuracion; no se ejecuta monitoreo automatico al arrancar.",
+            (
+                f"Seguimiento guardado para **{pokemon}** en {canal.mention}.\n"
+                "El monitoreo 100 IV quedo activo con una consulta compartida y periodica."
+            )
+            if channel_notice_sent
+            else (
+                f"Seguimiento guardado para **{pokemon}** en {canal.mention}, "
+                "pero no pude publicar el aviso inicial en ese canal. Revisa permisos de envio."
+            ),
             ephemeral=True,
         )
 
@@ -502,7 +695,7 @@ def register_commands(bot: LucarioDiscordBot) -> None:
                 lines.append(f"• **{watch['pokemon']}** -> <#{watch['channel_id']}>")
             embed.description = "\n".join(lines)
 
-        embed.set_footer(text="Seguimientos guardados en Lucario")
+        embed.set_footer(text="Seguimientos 100 IV activos en Lucario")
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @bot.tree.command(name="rocket", description="Busca Rockets en Moonani por tipo o lider.")
@@ -619,6 +812,8 @@ def main() -> None:
     geocoder_endpoint = os.getenv("MOONANI_GEOCODER_ENDPOINT", "").strip()
     geocoder_user_agent = os.getenv("MOONANI_GEOCODER_USER_AGENT", "").strip() or "Lucario Discord Bot/1.0"
     settings_path = Path(os.getenv("LUCARIO_SETTINGS_PATH", "lucario_guild_settings.json")).resolve()
+    watch_monitor_interval_seconds = _read_int_env("LUCARIO_MONITOR_INTERVAL_SECONDS", 180)
+    watch_scan_limit = _read_int_env("LUCARIO_ALERT_LIMIT_100IV", 250)
 
     moonani = MoonaniClient(
         timeout=timeout,
@@ -632,6 +827,8 @@ def main() -> None:
         page_size=page_size,
         max_scan_records=max_scan_records,
         settings_path=settings_path,
+        watch_monitor_interval_seconds=watch_monitor_interval_seconds,
+        watch_scan_limit=watch_scan_limit,
     )
     register_commands(bot)
     bot.run(token)
