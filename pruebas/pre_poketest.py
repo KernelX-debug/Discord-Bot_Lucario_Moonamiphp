@@ -10,11 +10,11 @@ def extraer_coords(texto):
 
 
 def limpiar_nombre(texto):
-    # Primero decodifica entidades HTML (&#9792; -> ♀, &#9794; -> ♂)
+
     texto = html.unescape(texto)
-    # Luego elimina las etiquetas HTML
+
     texto = re.sub(r"<[^>]+>", "", texto)
-    # Limpia espacios extra
+
     return texto.strip()
 
 
@@ -30,7 +30,7 @@ payload = {
     "pvp": 0,
     "pokemons": "",
     "start": 0,
-    "length": 230,  # todos los registros visibles del bloque solicitado
+    "length": 230,
     "draw": 1,
 }
 headers = {
