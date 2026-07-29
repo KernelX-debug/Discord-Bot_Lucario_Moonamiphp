@@ -1,105 +1,131 @@
-from __future__ import annotations
-
-from dataclasses import dataclass
-
+import re
+import time
+import random
 import requests
 from bs4 import BeautifulSoup
 
-from moonani_utils import (
-    build_session,
-    extract_coords_from_tag,
-    extract_country_code,
-    html_to_text,
-    match_priority,
-    normalize_name,
-)
+URL = "https://moonani.com/PokeList/raid.php"
 
-RAID_URL = "https://moonani.com/PokeList/raid.php"
-RAID_REFERER = "https://moonani.com/PokeList/"
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/136.0.0.0 Safari/537.36"
+    ),
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer": "https://moonani.com/PokeList/",
+}
 
-
-@dataclass(slots=True)
-class RaidEncounter:
-    name: str
-    number: str
-    level: str
-    coords: str
-    start_time: str
-    end_time: str
-    country: str
-
-    @property
-    def maps_url(self) -> str:
-        return f"https://maps.google.com/?q={self.coords}"
+session = requests.Session()
+session.headers.update(HEADERS)
 
 
-def fetch_raid_data(timeout: int = 20) -> list[RaidEncounter]:
-    session = build_session(RAID_REFERER)
-    response = session.get(RAID_URL, timeout=timeout)
+def clean_text(value):
+    return re.sub(r"\s+", " ", value).strip()
+
+
+def get_raid_data():
+
+    time.sleep(random.uniform(1.5, 3.5))
+
+    response = session.get(URL, timeout=20)
+
     response.raise_for_status()
 
     soup = BeautifulSoup(response.text, "html.parser")
-    raids: list[RaidEncounter] = []
 
-    for row in soup.find_all("tr"):
+    raids = []
+
+    rows = soup.find_all("tr")
+
+    for row in rows:
+
         cells = row.find_all("td")
+
+        # Validar columnas mínimas
         if len(cells) < 7:
             continue
 
-        coords = extract_coords_from_tag(cells[3])
-        if not coords:
-            continue
+        try:
 
-        raids.append(
-            RaidEncounter(
-                name=html_to_text(str(cells[0])),
-                number=html_to_text(str(cells[1])),
-                level=html_to_text(str(cells[2])),
-                coords=coords,
-                start_time=html_to_text(str(cells[4])),
-                end_time=html_to_text(str(cells[5])),
-                country=extract_country_code(str(cells[6])),
+            # =========================
+            # NOMBRE RAID
+            # =========================
+            raid_name = clean_text(
+                cells[0].get_text(" ", strip=True)
             )
-        )
+
+            # =========================
+            # NIVEL RAID
+            # =========================
+            level = clean_text(
+                cells[2].get_text(" ", strip=True)
+            )
+
+            # =========================
+            # COORDENADAS
+            # =========================
+            coords_button = cells[3].find(
+                attrs={"data-clipboard-text": True}
+            )
+
+            if not coords_button:
+                continue
+
+            coords = coords_button[
+                "data-clipboard-text"
+            ].strip()
+
+            # =========================
+            # PAÍS
+            # =========================
+            country_match = re.search(
+                r'flags/([a-z]{2})\.png',
+                str(cells[6]),
+                re.IGNORECASE
+            )
+
+            country = (
+                country_match.group(1).upper()
+                if country_match else "N/A"
+            )
+
+            raids.append(
+                {
+                    "raid_name": raid_name,
+                    "level": level,
+                    "coords": coords,
+                    "country": country,
+                    "maps_url": (
+                        f"https://maps.google.com/?q={coords}"
+                    ),
+                }
+            )
+
+        except Exception:
+            continue
 
     return raids
 
 
-def search_raids(
-    query: str,
-    timeout: int = 20,
-    limit: int = 8,
-) -> list[RaidEncounter]:
-    normalized_query = normalize_name(query)
-    matches: list[tuple[int, RaidEncounter]] = []
-
-    for raid in fetch_raid_data(timeout=timeout):
-        priority = match_priority(normalized_query, normalize_name(raid.name))
-        if priority is not None:
-            matches.append((priority, raid))
-
-    matches.sort(
-        key=lambda item: (
-            item[0],
-            item[1].name.lower(),
-            item[1].end_time,
-            item[1].coords,
-        )
-    )
-
-    return [raid for _, raid in matches[:limit]]
-
-
 if __name__ == "__main__":
+
     try:
-        for raid in search_raids("rayquaza"):
+
+        raid_data = get_raid_data()
+
+        print(f"\nSe encontraron {len(raid_data)} Raids:\n")
+
+        for raid in raid_data:
+
             print("=" * 60)
-            print(f"Raid    : {raid.name}")
-            print(f"Level   : {raid.level}")
-            print(f"Coords  : {raid.coords}")
-            print(f"Country : {raid.country}")
-            print(f"Start   : {raid.start_time}")
-            print(f"End     : {raid.end_time}")
-            print(f"Maps    : {raid.maps_url}")
-    except requests.RequestException as exc:
-        print(f"Error: {exc}")
+
+            print(f"Raid         : {raid['raid_name']}")
+            print(f"Nivel        : {raid['level']}")
+            print(f"Coords       : {raid['coords']}")
+            print(f"País         : {raid['country']}")
+            print(f"Maps         : {raid['maps_url']}")
+
+    except Exception as e:
+
+        print(f"Error: {e}")
