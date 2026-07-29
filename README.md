@@ -310,7 +310,6 @@ python rockettest.py
 
 ```powershell
 git clone https://github.com/KernelX-debug/Discord-Bot_Lucario_Moonamiphp.git
-cd Discord-Bot_Lucario_Moonamiphp
 ```
 ### Modificar archivos e instalar dependencias
 
@@ -330,7 +329,7 @@ py -3.13 -m pip install -r requirements.txt
 ```powershell
 @"
 DISCORD_BOT_TOKEN=pega_aqui_el_token_de_tu_bot
-DISCORD_GUILD_ID=
+DISCORD_GUILD_ID=pega_aqui_el_id_del_servidor_discord
 MOONANI_TIMEOUT=20
 MOONANI_PAGE_SIZE=100
 MOONANI_MAX_SCAN_RECORDS=10000
@@ -362,7 +361,7 @@ LUCARIO_ALERT_LIMIT_0IV=250
 ## Ejecucion
 
 ```powershell
-py -3.13 discord_bot.py
+py -3.13 bot.py
 ```
 
 ## Ejemplos de uso
