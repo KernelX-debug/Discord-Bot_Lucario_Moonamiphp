@@ -1,148 +1,102 @@
-from __future__ import annotations
-
-from dataclasses import dataclass
+import re
+import unicodedata
+from typing import Dict, List
 
 import requests
 from bs4 import BeautifulSoup
 
-from moonani_utils import (
-    build_session,
-    extract_coords_from_tag,
-    extract_country_code,
-    html_to_text,
-    match_priority,
-    normalize_name,
-)
 
-QUEST_URL = "https://moonani.com/PokeList/quest.php"
-QUEST_REFERER = "https://moonani.com/PokeList/"
+URL = "https://moonani.com/PokeList/quest.php"
 
-QUEST_AUTOCOMPLETE_NAMES = [
-    "Kecleon",
-    "Pikachu",
-    "Psyduck",
-    "Snorlax",
-    "Spinda",
-]
-
-ALLOWED_QUEST_NAMES = {
-    "kecleon": {"kecleon"},
-    "pikachu": {"pikachu"},
-    "psyduck": {"psyduck"},
-    "snorlax": {"snorlax"},
-    "spinda": {"spinda 00", "spinda 07", "spinda"},
-    "spinda 00": {"spinda 00"},
-    "spinda 07": {"spinda 07"},
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/136.0.0.0 Safari/537.36"
+    ),
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer": "https://moonani.com/PokeList/",
 }
 
-
-@dataclass(slots=True)
-class QuestEncounter:
-    pokemon: str
-    pokemon_id: str
-    quest: str
-    coords: str
-    start_time: str
-    end_time: str
-    country: str
-
-    @property
-    def maps_url(self) -> str:
-        return f"https://maps.google.com/?q={self.coords}"
+session = requests.Session()
+session.headers.update(HEADERS)
 
 
-def fetch_quest_data(timeout: int = 20) -> list[QuestEncounter]:
-    session = build_session(QUEST_REFERER)
-    response = session.get(QUEST_URL, timeout=timeout)
+def limpiar_texto(texto: str) -> str:
+    return re.sub(r"\s+", " ", texto or "").strip()
+
+
+def normalizar_texto(texto: str) -> str:
+    texto = limpiar_texto(texto).lower()
+    normalized = unicodedata.normalize("NFKD", texto)
+    return "".join(char for char in normalized if not unicodedata.combining(char))
+
+
+def extraer_coords(columna) -> str:
+    boton = columna.find(attrs={"data-clipboard-text": True})
+    if boton:
+        return limpiar_texto(str(boton.get("data-clipboard-text", "")))
+    return limpiar_texto(columna.get_text())
+
+
+def obtener_quests(timeout: int = 20) -> List[Dict[str, str]]:
+    response = session.get(URL, timeout=timeout)
     response.raise_for_status()
 
     soup = BeautifulSoup(response.text, "html.parser")
-    quests: list[QuestEncounter] = []
+    quests = []
 
-    for row in soup.find_all("tr"):
-        cells = row.find_all("td")
-        if len(cells) < 7:
+    for fila in soup.find_all("tr"):
+        columnas = fila.find_all("td")
+        if len(columnas) < 7:
             continue
 
-        coords = extract_coords_from_tag(cells[3])
-        if not coords:
+        pokemon = limpiar_texto(columnas[0].get_text())
+        coords = extraer_coords(columnas[3])
+
+        if not pokemon or "," not in coords:
             continue
 
         quests.append(
-            QuestEncounter(
-                pokemon=html_to_text(str(cells[0])),
-                pokemon_id=html_to_text(str(cells[1])),
-                quest=html_to_text(str(cells[2])),
-                coords=coords,
-                start_time=html_to_text(str(cells[4])),
-                end_time=html_to_text(str(cells[5])),
-                country=extract_country_code(str(cells[6])),
-            )
+            {
+                "pokemon": pokemon,
+                "pokemon_id": limpiar_texto(columnas[1].get_text()),
+                "quest": limpiar_texto(columnas[2].get_text()),
+                "coords": coords,
+                "inicio": limpiar_texto(columnas[4].get_text()),
+                "fin": limpiar_texto(columnas[5].get_text()),
+                "pais": limpiar_texto(columnas[6].get_text()).upper() or "N/D",
+                "maps": f"https://maps.google.com/?q={coords}",
+            }
         )
 
     return quests
 
 
-def normalize_quest_query(query: str) -> str:
-    normalized = normalize_name(query)
-    if normalized.startswith("spinda"):
-        if "00" in normalized:
-            return "spinda 00"
-        if "07" in normalized:
-            return "spinda 07"
-        return "spinda"
-    return normalized
-
-
-def search_quests(
-    query: str,
-    timeout: int = 20,
-    limit: int = 8,
-) -> list[QuestEncounter]:
-    normalized_query = normalize_quest_query(query)
-    allowed_names = ALLOWED_QUEST_NAMES.get(normalized_query)
-
-    if not allowed_names:
+def search_quests(nombre: str, limit: int = 5, timeout: int = 20) -> List[Dict[str, str]]:
+    query = normalizar_texto(nombre)
+    if not query:
         return []
 
-    matches: list[tuple[int, QuestEncounter]] = []
-
-    for quest in fetch_quest_data(timeout=timeout):
-        priority = match_priority(
-            normalized_query if normalized_query != "spinda" else "spinda",
-            normalize_name(quest.pokemon),
-        )
-
-        if priority is None:
+    results = []
+    for quest in obtener_quests(timeout=timeout):
+        if query not in normalizar_texto(quest["pokemon"]):
             continue
 
-        if normalize_name(quest.pokemon) not in allowed_names:
-            continue
+        results.append(quest)
+        if len(results) >= limit:
+            break
 
-        matches.append((priority, quest))
-
-    matches.sort(
-        key=lambda item: (
-            item[0],
-            item[1].pokemon.lower(),
-            item[1].end_time,
-            item[1].coords,
-        )
-    )
-
-    return [quest for _, quest in matches[:limit]]
+    return results
 
 
 if __name__ == "__main__":
-    try:
-        for quest in search_quests("spinda"):
-            print("=" * 60)
-            print(f"Pokemon : {quest.pokemon} #{quest.pokemon_id}")
-            print(f"Quest   : {quest.quest}")
-            print(f"Coords  : {quest.coords}")
-            print(f"Country : {quest.country}")
-            print(f"Start   : {quest.start_time}")
-            print(f"End     : {quest.end_time}")
-            print(f"Maps    : {quest.maps_url}")
-    except requests.RequestException as exc:
-        print(f"Error: {exc}")
+    for quest in search_quests("lapras", limit=10):
+        print("=" * 60)
+        print(f"Pokemon : {quest['pokemon']} #{quest['pokemon_id']}")
+        print(f"Quest   : {quest['quest']}")
+        print(f"Coords  : {quest['coords']}")
+        print(f"Pais    : {quest['pais']}")
+        print(f"Inicio  : {quest['inicio']}")
+        print(f"Fin     : {quest['fin']}")
+        print(f"Maps    : {quest['maps']}")
