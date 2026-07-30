@@ -7,36 +7,47 @@ Bot de Discord en Python que consulta el endpoint de Moonani PokeList para obten
 ## Que hace este proyecto. ¿A que quiero llegar?
 
 - Consulta el endpoint `https://moonani.com/PokeList/ajax.php?page=pokemon&action=load`
+- Consulta información de rockets, raids y quests de la página web moonani
 - Limpia el HTML que devuelve Moonani en campos como nombre, IV, coordenadas y pais
-- Extrae coordenadas listas para copiar y pegar, además de link redirigido a google maps.
+- Extrae coordenadas listas para copiar y pegar, además de link redirigido a google maps
 - Permite buscar por nombre parcial
 - De momento solo filtra los pokemones iv100 y iv0
-- Responde en Discord con mensajes compactos
+- Capacidad de filtrar funciones adicionales que se mencionan a continuación
+- Responde en Discord con mensajes compactos y directos
 
-## Estructura del proyecto
+## Estructura indispensable del proyecto
 
 - `discord_bot.py`: punto de entrada del bot y definicion de comandos
 - `moonani_client.py`: cliente HTTP y logica de parseo/filtrado de resultados
-- `test_pokelist_limpio.py`: script base limpio usado para validar la idea original
+- `poketest.py`: script base limpio usado para validar la idea original
+- `raidtest.py`: script base limpio usado para validar la idea de la función de raids en el juego
+- `rockettest.py`: script base limpio usado para validar la idea de la función de rockeets en el juego
+- `questtest.py`: script base limpio usado para validar la idea de la función de quests en el juego
 - `.env`: variables de entorno (No compartir estos datos con terceros)
 - `requirements.txt`: dependencias del proyecto
 
-## Comandos disponibles en discord
-**Comandos para todos los usuarios de discord**
+## Comandos disponibles en discord (18)
+**Comandos para todos los usuarios de discord (@everyone)**
+
 - `/ping`: verifica si el bot esta en linea
 - `/pokemon`: muestra resultados con formato enriquecido para pokemones iv100
 - `/pokemon0`: muestra resultados en formato enriquecido para pokemones iv0
-- `/coords`: devuelve coordenadas en formato compacto para copiar para pokemones iv100
-- `/coords0`: devuelve coordenadas en formato compacto para copiar para pokemones iv0
-
+- `/coords`: devuelve coordenadas en formato compacto para copiar con facilidad coordenadas para pokemones iv100
+- `/coords0`: devuelve coordenadas en formato compacto para copiar con facilidad coordenadas para pokemones iv0
+- `/raid`: muestra resultados con formato enriquecido para raids a nivel global
+- `/rocket`: muestra resultados con formato enriquecido para rockets a nivel global
+- `/quest`: muestra resultados con formato enriquecido para quests a nivel global
+  
 **Comandos para uso administrativo en discord (permisos de administrador)**
 
-- `/configurar_canal`: permite configurar un canal específico para enviar alertas de pokemones iv100/iv0 de forma constante y actualizada
-- `/quitar_canal`: permite quitar el canal configurado para las alertas de pokemones iv100/iv0
-- `/ver_canales`: muestra los canales configurados para alertas automáticas
+- `/agregar_canal_iv100`: permite configurar un canal específico para enviar alertas de pokemones iv100 de forma constante y actualizada
+- `/agregar_canal_iv0`: permite configurar un canal específico para enviar alertas de pokemones iv0 de forma constante y actualizada
+- `/ver_canales_iv`: muestra los canales globales iv100 e iv0 guardados
+- `/quitar_canal_iv100`: desactiva los avisos globales iv100 en el canal antes configurado
+- `/quitar_canal_iv0`: desactiva los avisos globales iv0 en el canal antes configurado
 - `/agregar_seguimiento`: agrega alertas de un pokemón específico iv100 en un canal
+- `/ver_seguimientos`: ver todos los seguimientos de pokémon iv100 configurados
 - `/quitar_seguimiento`: quitar alertas de un pokemón específico iv100 del canal
-- `/ver_seguimiento`: ver todos los seguimientos de pokémon iv100 configurados
 
 ## Requisitos
 
@@ -53,8 +64,9 @@ Antes de usar el bot de Discord, es posible validar desde cero la extraccion y e
 mkdir prueba_moonani
 cd prueba_moonani
 ```
-### 2. Crear el archivo pokemontest.py
-Crea un archivo llamado `pokemontest.py` con este contenido:
+
+### 2. Crear el archivo pre_poketest.py
+Crea un archivo python llamado `pre_poketest.py` con este contenido:
 
 ```python
 import requests
@@ -122,8 +134,9 @@ py -3.13 -m pip install requests
 ### 4. Ejecutar la prueba
 
 ```powershell
-py -3.13 pokemontest.py
+py -3.13 pre_poketest.py
 ```
+
 ## Resultado esperado
 - Se realiza una peticion HTTP directa al endpoint de Moonani.
 - Se procesa la respuesta JSON recibida.
@@ -139,7 +152,7 @@ py -3.13 pokemontest.py
 
 ## Prueba de funcionamiento breve para rockets
 
-Antes de usar el bot de Discord, es posible validar desde cero la extraccion y el parseo de datos de Moonani con un script independiente. Esta prueba no requiere clonar el repositorio completo ni configurar Discord.
+Antes de usar el bot de Discord, es posible validar desde cero la extraccion y el parseo de datos en tabla de la sección rockets de Moonani con un script independiente. Esta prueba no requiere clonar el repositorio completo ni configurar Discord.
 
 ### 1. Crear una carpeta de trabajo
 
@@ -157,13 +170,13 @@ pip install requests beautifulsoup4
 ### 3. Crear el archivo rockettest.py
 
 ```powershell
-New-Item rockettest.py -ItemType File
+New-Item pre_rockettest.py -ItemType File
 ```
 
 ### 4. Modifica el archivo en el bloc de notas nativo de windows
 
 ```powershell
-notepad rockettest.py
+notepad pre_rockettest.py
 ```
 
 **Pega el siguiente contenido:**
@@ -284,7 +297,7 @@ if __name__ == "__main__":
 ### 5. Ejecuta el script de python
 
 ```powershell
-python rockettest.py
+python pre_rockettest.py
 ```
 
 ## Resultado esperado
@@ -298,6 +311,10 @@ python rockettest.py
 * Se imprime en consola una lista organizada con tipo Rocket, líder Rocket, coordenadas, país, tiempo de aparición, tiempo de expiración y enlace de Google Maps.
 * Esta prueba permite verificar técnicamente que la página responde correctamente y que el parseo base funciona antes de integrar la lógica en el bot de Discord.
 
+**Actualización: Últimamente se presentan errores en la cantidad de información de la tabla dinámica de la sección rockets Moonani, dicha problemática escapa de mis manos ya que no soy programador oficial de esta plataforma web**
+- Puedes revisar el estado de la página desde [Moonani Rockets Status](https://moonani.com/PokeList/rocket.php)
+
+*Recuerda que, si no estás pagando por el producto, tú eres el producto*
 
 ## Imagen de referencia
 
@@ -309,14 +326,14 @@ python rockettest.py
 ### Clonar el repositorio
 
 ```powershell
-git clone https://github.com/KernelX-debug/Discord-Bot_Lucario_Moonamiphp.git
+git clone https://github.com/KernelX-debug/Discord-Bot_Lucario_Moonaniphp.git
 ```
 ### Modificar archivos e instalar dependencias
 
 1. En la carpeta del proyecto.
 
 ```powershell
-cd Discord-Bot_Lucario_Moonamiphp
+cd Discord-Bot_Lucario_Moonaniphp
 ```
 
 2. Instala las dependencias.
@@ -361,7 +378,7 @@ LUCARIO_ALERT_LIMIT_0IV=250
 ## Ejecucion
 
 ```powershell
-py -3.13 bot.py
+py -3.13 discord_bot.py
 ```
 
 ## Ejemplos de uso
@@ -374,8 +391,8 @@ py -3.13 bot.py
 ## Funcionamiento
 
 <p align="center">
-  <img src="assets/pikipeksearch.png" alt="Busqueda de Pikipek" width="45%">
-  <img src="assets/lucariosearch.png" alt="Busqueda de Lucario" width="45%">
+  <img src="assets/pikasearch.png" alt="Busqueda de Pikipek" width="45%">
+  <img src="assets/smolivsearch.png" alt="Busqueda de Lucario" width="45%">
 </p>
 
 ## Como invitar el bot a tu servidor
@@ -388,9 +405,7 @@ py -3.13 bot.py
 
 ## Mejoras futuras
 
-- Agregar búsqueda de misiones/recompensa pokemón
 - Utilizando el endpoint se puede acceder a más filtros de pokemones como los perfet league R1
-- En proceso....
 
 ## Notas
 
@@ -398,6 +413,6 @@ py -3.13 bot.py
 - El endpoint publico de Nominatim puede devolver `429 Too Many Requests` si recibe demasiadas consultas. Para un bot publico, lo ideal es usar un geocoder propio, uno autoalojado o un proveedor con cuota adecuada.
 
 ## Licencia
-**The Unlicense**
+**MIT License**
 
-<https://unlicense.org>
+[mit-license.org/license.txt](https://mit-license.org/license.txt)
