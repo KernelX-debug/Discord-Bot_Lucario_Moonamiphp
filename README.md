@@ -311,10 +311,10 @@ python pre_rockettest.py
 - Se imprime en consola una lista organizada con tipo Rocket, líder Rocket, coordenadas, país, tiempo de aparición, tiempo de expiración y enlace de Google Maps.
 - Esta prueba permite verificar técnicamente que la página responde correctamente y que el parseo base funciona antes de integrar la lógica en el bot de Discord.
 
-**ACTUALIZACIÓN IMPORTANTE: Últimamente se presentan errores en la cantidad de información de la tabla dinámica de la sección rockets Moonani, dicha problemática escapa de mis manos ya que no soy programador oficial de esta plataforma web**
+**ACTUALIZACIÓN IMPORTANTE: Últimamente se presentan errores en la cantidad de información de la tabla dinámica de la sección rockets Moonani, dicha problemática escapa de mis manos ya que no soy programador oficial de esta plataforma web.**
 - Puedes revisar el estado de la página desde [Moonani Rockets Status](https://moonani.com/PokeList/rocket.php)
 
-*si no estás pagando por el producto, tú eres el producto*
+*"si no estás pagando por el producto, tú eres el producto"*
 
 ## Imagen de referencia
 
