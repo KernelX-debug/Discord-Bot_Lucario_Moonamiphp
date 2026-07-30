@@ -14,6 +14,7 @@ Bot de Discord en Python que consulta el endpoint de Moonani PokeList para obten
 - De momento solo filtra los pokemones iv100 y iv0
 - Capacidad de filtrar funciones adicionales que se mencionan a continuación
 - Responde en Discord con mensajes compactos y directos
+- Tiene la capacidad de enviar multimedia del pokemón aparecido
 
 ## Estructura indispensable del proyecto
 
