@@ -78,11 +78,11 @@ def extraer_coords(texto):
     return match.group(1) if match else ""
 
 def limpiar_nombre(texto):
-    # Primero decodifica entidades HTML (&#9792; -> ♀, &#9794; -> ♂)
+    
     texto = html.unescape(texto)
-    # Luego elimina las etiquetas HTML
+    
     texto = re.sub(r'<[^>]+>', '', texto)
-    # Limpia espacios extra
+    
     return texto.strip()
 
 def extraer_pais(texto):
@@ -125,6 +125,7 @@ for p in data:
     print(f"🌍 País: {pais}")
     print(f"🗺️  https://maps.google.com/?q={coords}")
 ```
+
 ### 3. Instalar la dependencia necesaria
 
 ```powershell
