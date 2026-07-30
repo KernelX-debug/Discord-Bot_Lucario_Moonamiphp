@@ -32,8 +32,8 @@ Bot de Discord en Python que consulta el endpoint de Moonani PokeList para obten
 - `/ping`: verifica si el bot esta en linea
 - `/pokemon`: muestra resultados con formato enriquecido para pokemones iv100
 - `/pokemon0`: muestra resultados en formato enriquecido para pokemones iv0
-- `/coords`: devuelve coordenadas en formato compacto para copiar con facilidad coordenadas para pokemones iv100
-- `/coords0`: devuelve coordenadas en formato compacto para copiar con facilidad coordenadas para pokemones iv0
+- `/coords`: devuelve coordenadas en formato compacto de pokemones iv100 para copiar con facilidad
+- `/coords0`: devuelve coordenadas en formato compacto de pokemones iv0 para copiar con facilidad
 - `/raid`: muestra resultados con formato enriquecido para raids a nivel global
 - `/rocket`: muestra resultados con formato enriquecido para rockets a nivel global
 - `/quest`: muestra resultados con formato enriquecido para quests a nivel global
