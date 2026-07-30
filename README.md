@@ -739,7 +739,7 @@ py -3.13 discord_bot.py
 
 - Utilizando el endpoint se puede acceder a más filtros de pokemones como los perfect league R1
 - El endpoint principal incluye pokemones con iv random que se consideran "caramelos" en la página web de Moonani, estos pueden ser agregados al bot
-- Se puede buscar una solución al problema de los rockets, ya que la app de pokelist si aparecen los filtros de estos mismos 🤔
+- Se puede buscar una solución al problema de los rockets, ya que en la app de pokelist si aparecen los filtros de estos mismos 🤔
 - Hasta la fecha, esta ya se considera una versión oficial del proyecto 🥳🥳
 
 ## ⚙️ Notas
@@ -753,7 +753,7 @@ py -3.13 discord_bot.py
 
 
 <p align="left">
-  <img src="https://media1.tenor.com/m/Qr0iBlPVDgUAAAAd/emperors-new-groove-kuzco.gif" alt="Kuzco" width="300" style="margin-left: 20px;">
+  <img src="https://media1.tenor.com/m/Qr0iBlPVDgUAAAAd/emperors-new-groove-kuzco.gif" alt="Kuzco" width="300" style="margin-left: 23px;">
 </p>
 
 
