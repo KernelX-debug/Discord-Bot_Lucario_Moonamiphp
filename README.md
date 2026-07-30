@@ -26,7 +26,7 @@ Bot de Discord en Python que consulta el endpoint de Moonani PokeList para obten
 - `.env`: variables de entorno (No compartir estos datos con terceros)
 - `requirements.txt`: dependencias del proyecto
 
-## Comandos disponibles en discord (18)
+## 🔎 Comandos disponibles en discord (18)
 **Comandos para todos los usuarios de discord (@everyone)**
 
 - `/ping`: verifica si el bot esta en linea
@@ -57,7 +57,7 @@ Bot de Discord en Python que consulta el endpoint de Moonani PokeList para obten
 - Cuenta en Railway u otra "cloud platform" para uso del bot 24/7 sin tener la compu encendida (Opcional)
 - Acceso administrativo en el servidor de discord donde se gusta acoplar este servicio (Obligatorio)
 
-# SI BUSCAS DE FORMA DIRECTA LA CONFIGURACIÓN DEL BOT EN DISCORD PUEDES SALTARTE ESTA PARTE E IR [AQUÍ](https://github.com/KernelX-debug/Discord-Bot_Lucario_Moonaniphp#instalacion-para-uso-como-bot-de-discord)
+# SI BUSCAS DE FORMA DIRECTA LA CONFIGURACIÓN DEL BOT EN DISCORD PUEDES SALTARTE ESTA PARTE E IR [AQUÍ](https://github.com/KernelX-debug/Discord-Bot_Lucario_Moonaniphp#instalacion-para-uso-como-bot-de-discord) ‼️
 
 ## Prueba de funcionamiento breve para pokemones
 
@@ -724,7 +724,7 @@ py -3.13 discord_bot.py
   <img src="assets/agregar_canal_iv100.png" alt="Agregar canal iv100" width="41.5%">
 </p>
 
-## Como invitar el bot a tu servidor
+## 🔓 Como invitar el bot a tu servidor
 
 1. Abre tu aplicacion en el [Discord Developer Portal](https://discord.com/developers/applications).
 2. Ve a `OAuth2` > `URL Generator`.
@@ -736,14 +736,31 @@ py -3.13 discord_bot.py
 
 - Utilizando el endpoint se puede acceder a más filtros de pokemones como los perfet league R1
 
-## Notas
+## ⚙️ Notas
 
 - Si Moonani no devuelve pais, el bot muestra `Unknown`. Puedes activar `MOONANI_RESOLVE_COUNTRIES=true` para intentar resolver el pais desde las coordenadas usando reverse geocoding.
 - El endpoint publico de Nominatim puede devolver `429 Too Many Requests` si recibe demasiadas consultas. Para un bot publico, lo ideal es usar un geocoder propio, uno autoalojado o un proveedor con cuota adecuada.
 - La sección de rockets puede tener problemas temporales en cuanto a los datos de la tabla dinámica, como antes lo mencioné, esto se debe a la página en si.
 - Si llegas a observar `CommandInvokeError` al ejecutar algún comando en discord, te recomiendo revises las operaciones del Windows Defender y permitas las acciones de python en el ordenador, de igual manera esto no afecta al funcionamiento del bot. En caso de deploy en servidores este tampoco es un problema mayor.
 
-## Patrocíname ♡
+## ☁️ Hosting gratuito 24/7
+
+Para mantener el bot activo sin necesidad de tener tu PC encendida puedes usar [Railway](https://railway.app). Simplemente conecta tu repositorio de GitHub y agrega las siguientes variables de entorno con sus respectivos valores en la sección **Variables:**
+
+`DISCORD_BOT_TOKEN`
+`DISCORD_GUILD_ID`
+`MOONANI_TIMEOUT`
+`MOONANI_PAGE_SIZE`
+`MOONANI_MAX_SCAN_RECORDS`
+`MOONANI_RESOLVE_COUNTRIES`
+`MOONANI_GEOCODER_ENDPOINT`
+`MOONANI_GEOCODER_USER_AGENT`
+`LUCARIO_SETTINGS_PATH`
+`LUCARIO_MONITOR_INTERVAL_SECONDS`
+`LUCARIO_ALERT_LIMIT_100IV`
+`LUCARIO_ALERT_LIMIT_0IV`
+
+## 👉 Patrocíname ♡
 
 <p align="left">
   <a href="https://buymeacoffee.com/ghericasas" target="_blank">
@@ -752,7 +769,7 @@ py -3.13 discord_bot.py
 </p>
 
 
-## Licencia
+## 📜 Licencia
 **MIT License**
 
 [mit-license.org](https://mit-license.org/license.txt)
