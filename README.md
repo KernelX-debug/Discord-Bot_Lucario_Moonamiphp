@@ -745,11 +745,12 @@ py -3.13 discord_bot.py
 
 ## Patrocíname ♡
 
-<p align="center">
+<p align="left">
   <a href="https://buymeacoffee.com/ghericasas" target="_blank">
-    <img src="https://buymeacoffee.com" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" >
+    <img src="https://github.com/user-attachments/assets/6db1edad-4682-4a4f-803f-b7c416c19cd3" alt="Buy Me A Coffee" width="217">
   </a>
 </p>
+
 
 ## Licencia
 **MIT License**
