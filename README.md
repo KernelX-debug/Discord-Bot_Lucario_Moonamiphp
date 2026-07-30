@@ -711,14 +711,16 @@ LUCARIO_ALERT_LIMIT_0IV=250
 py -3.13 discord_bot.py
 ```
 
-## 👇 Ejemplos de uso
+## Ejemplos de uso
 
 ```text
 /pokemon nombre:wiglett cantidad:3
 /coords nombre:pikachu cantidad:5
+/raid nombre: kyurem cantidad: 2
+/quest nombre: kecleon cantidad: 4
 ```
 
-## 🧐 Funcionamiento
+## Funcionamiento
 
 <p align="center">
   <img src="assets/chikoritasearch.png" alt="Busqueda de Chikorita" width="45%">
@@ -747,11 +749,13 @@ py -3.13 discord_bot.py
 - La sección de rockets puede tener problemas temporales en cuanto a los datos de la tabla dinámica, como antes lo mencioné, esto se debe a la página en si.
 - Si llegas a observar `CommandInvokeError` al ejecutar algún comando en discord, te recomiendo revises las operaciones del Windows Defender y permitas las acciones de python en el ordenador, de igual manera esto no afecta al funcionamiento del bot. En caso de deploy en servidores este tampoco es un problema mayor.
 - Puedes revisar la carpeta assets para revisar contenido multimedia del uso de este bot en discord.
-- Si estás viendo esto en su momento, felices fiestas patrias bro.
+- Si estás viendo esto en su momento, felices fiestas patrias bro..
+
 
 <p align="left">
-  <img src="https://media1.tenor.com/m/Qr0iBlPVDgUAAAAd/emperors-new-groove-kuzco.gif" alt="Kuzco" width="300">
+  <img src="https://media1.tenor.com/m/Qr0iBlPVDgUAAAAd/emperors-new-groove-kuzco.gif" alt="Kuzco" width="300" style="margin-left: 20px;">
 </p>
+
 
 ## ☁️ Hosting de prueba gratuita 24/7
 
