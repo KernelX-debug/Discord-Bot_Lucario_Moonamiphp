@@ -12,9 +12,9 @@ Bot de Discord en Python que consulta el endpoint de Moonani PokeList para obten
 - Extrae coordenadas listas para copiar y pegar, además de link redirigido a google maps
 - Permite buscar por nombre parcial
 - De momento solo filtra los pokemones iv100 y iv0
-- Capacidad de filtrar funciones adicionales que se mencionan a continuación
+- Capacidad de filtrar funciones adicionales que se mencionarán a continuación
 - Responde en Discord con mensajes compactos y directos
-- Tiene la capacidad de enviar multimedia del pokemón aparecido
+- Tiene la capacidad de enviar contenido multimedia de acuerdo al pokemón aparecido en estado salvaje
 
 ## Estructura indispensable del proyecto
 
