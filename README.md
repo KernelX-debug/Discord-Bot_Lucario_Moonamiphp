@@ -332,61 +332,124 @@ cd prueba_raids_moonani
 Crea un archivo python llamado `pre_raidtest.py` con este contenido:
 
 ```python
-import requests
 import re
-import html
+import time
+import random
+import requests
+from bs4 import BeautifulSoup
 
-def extraer_coords(texto):
-    match = re.search(r'data-clipboard-text="([^"]+)"', texto)
-    return match.group(1) if match else ""
+URL = "https://moonani.com/PokeList/raid.php"
 
-def limpiar_nombre(texto):
-    
-    texto = html.unescape(texto)
-    
-    texto = re.sub(r'<[^>]+>', '', texto)
-    
-    return texto.strip()
-
-def extraer_pais(texto):
-    texto = html.unescape(texto)
-    texto = re.sub(r'<[^>]+>', '', texto).strip()
-    return texto if texto else "??"
-
-url = "https://moonani.com/PokeList/ajax.php?page=pokemon&action=load"
-payload = {
-    "iv": 100,
-    "pvp": 0,
-    "pokemons": "",
-    "start": 0,
-    "length": 230,
-    "draw": 1
-}
-headers = {
-    "Referer": "https://moonani.com/PokeList/index.php",
-    "Content-Type": "application/x-www-form-urlencoded"
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/136.0.0.0 Safari/537.36"
+    ),
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer": "https://moonani.com/PokeList/",
 }
 
-r = requests.post(url, data=payload, headers=headers)
-data = r.json().get("data", [])
+session = requests.Session()
+session.headers.update(HEADERS)
 
-print(f"Total pokémones recibidos: {len(data)}\n")
 
-for p in data:
-    nombre = limpiar_nombre(p["Name"])
-    coords = extraer_coords(p["Coords"])
-    shiny  = "✨ SHINY" if p["Shiny"] == "Yes" else ""
-    pais   = extraer_pais(p["Country"])
+def clean_text(value):
+    return re.sub(r"\s+", " ", value).strip()
 
-    print(f"{'='*50}")
-    print(f"🎯 {nombre} #{p['Number']} {shiny}")
-    print(f"📍 {coords}")
-    print(f"⚡ CP: {p['CP']} | Nivel: {p['Level']}")
-    print(f"💪 ATK:{p['Attack']} DEF:{p['Defense']} HP:{p['HP']}")
-    print(f"⏱️  Inicio: {p['Start Time']}")
-    print(f"⏱️  Fin:    {p['End Time']}")
-    print(f"🌍 País: {pais}")
-    print(f"🗺️  https://maps.google.com/?q={coords}")
+
+def get_raid_data():
+
+    time.sleep(random.uniform(1.5, 3.5))
+
+    response = session.get(URL, timeout=20)
+
+    response.raise_for_status()
+
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    raids = []
+
+    rows = soup.find_all("tr")
+
+    for row in rows:
+
+        cells = row.find_all("td")
+
+        if len(cells) < 7:
+            continue
+
+        try:
+
+            raid_name = clean_text(
+                cells[0].get_text(" ", strip=True)
+            )
+
+            level = clean_text(
+                cells[2].get_text(" ", strip=True)
+            )
+
+            coords_button = cells[3].find(
+                attrs={"data-clipboard-text": True}
+            )
+
+            if not coords_button:
+                continue
+
+            coords = coords_button[
+                "data-clipboard-text"
+            ].strip()
+
+            country_match = re.search(
+                r'flags/([a-z]{2})\.png',
+                str(cells[6]),
+                re.IGNORECASE
+            )
+
+            country = (
+                country_match.group(1).upper()
+                if country_match else "N/A"
+            )
+
+            raids.append(
+                {
+                    "raid_name": raid_name,
+                    "level": level,
+                    "coords": coords,
+                    "country": country,
+                    "maps_url": (
+                        f"https://maps.google.com/?q={coords}"
+                    ),
+                }
+            )
+
+        except Exception:
+            continue
+
+    return raids
+
+
+if __name__ == "__main__":
+
+    try:
+
+        raid_data = get_raid_data()
+
+        print(f"\nSe encontraron {len(raid_data)} Raids:\n")
+
+        for raid in raid_data:
+
+            print("=" * 60)
+
+            print(f"Raid         : {raid['raid_name']}")
+            print(f"Nivel        : {raid['level']}")
+            print(f"Coords       : {raid['coords']}")
+            print(f"País         : {raid['country']}")
+            print(f"Maps         : {raid['maps_url']}")
+
+    except Exception as e:
+
+        print(f"Error: {e}")
 ```
 
 ### 3. Instalar la dependencia necesaria
@@ -414,7 +477,7 @@ py -3.13 pre_raidtest.py
 ## Imagen de referencia
 
 <p align="center">
-  <img src="assets/raidtest.png" alt="test de moonami" width="100%">
+  <img src="assets/testraid.png" alt="test de moonami" width="100%">
 </p>
 
 ## Instalacion para uso como bot de discord
