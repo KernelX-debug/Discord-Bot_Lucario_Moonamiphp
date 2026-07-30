@@ -27,7 +27,7 @@ Bot de Discord en Python que consulta el endpoint de Moonani PokeList para obten
 - `.env`: variables de entorno (No compartir estos datos con terceros)
 - `requirements.txt`: dependencias del proyecto
 
-## 🔎 Comandos disponibles en discord (18)
+## 🔎 Comandos disponibles en discord (16)
 **Comandos para todos los usuarios de discord (@everyone)**
 
 - `/ping`: verifica si el bot esta en linea
