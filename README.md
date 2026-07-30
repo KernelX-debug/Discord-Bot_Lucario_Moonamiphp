@@ -496,12 +496,10 @@ Crea un archivo python llamado `pre_questtest.py` con este contenido:
 
 ```python
 import re
-import time
-import random
 import requests
 from bs4 import BeautifulSoup
 
-URL = "https://moonani.com/PokeList/raid.php"
+URL = "https://moonani.com/PokeList/quest.php"
 
 HEADERS = {
     "User-Agent": (
@@ -517,102 +515,106 @@ session = requests.Session()
 session.headers.update(HEADERS)
 
 
-def clean_text(value):
-    return re.sub(r"\s+", " ", value).strip()
+def limpiar_texto(texto):
+    return re.sub(r"\s+", " ", texto).strip()
 
 
-def get_raid_data():
-
-    time.sleep(random.uniform(1.5, 3.5))
-
+def obtener_quests():
     response = session.get(URL, timeout=20)
 
-    response.raise_for_status()
+    if response.status_code != 200:
+        print(f"[!] Error HTTP: {response.status_code}")
+        return []
 
     soup = BeautifulSoup(response.text, "html.parser")
 
-    raids = []
+    filas = soup.find_all("tr")
 
-    rows = soup.find_all("tr")
+    quests = []
 
-    for row in rows:
+    for fila in filas:
+        columnas = fila.find_all("td")
 
-        cells = row.find_all("td")
-
-        if len(cells) < 7:
+        if len(columnas) < 6:
             continue
 
         try:
+            pokemon = limpiar_texto(columnas[0].get_text())
+            pokemon_id = limpiar_texto(columnas[1].get_text())
+            quest = limpiar_texto(columnas[2].get_text())
+            coords = limpiar_texto(columnas[3].get_text())
+            fecha_inicio = limpiar_texto(columnas[4].get_text())
+            fecha_fin = limpiar_texto(columnas[5].get_text())
 
-            raid_name = clean_text(
-                cells[0].get_text(" ", strip=True)
-            )
+            pais = "Desconocido"
+            if len(columnas) >= 7:
+                pais = limpiar_texto(columnas[6].get_text())
 
-            level = clean_text(
-                cells[2].get_text(" ", strip=True)
-            )
-
-            coords_button = cells[3].find(
-                attrs={"data-clipboard-text": True}
-            )
-
-            if not coords_button:
+            if "," not in coords:
                 continue
 
-            coords = coords_button[
-                "data-clipboard-text"
-            ].strip()
+            lat, lon = coords.split(",", 1)
 
-            country_match = re.search(
-                r'flags/([a-z]{2})\.png',
-                str(cells[6]),
-                re.IGNORECASE
-            )
+            maps = f"https://maps.google.com/?q={lat},{lon}"
 
-            country = (
-                country_match.group(1).upper()
-                if country_match else "N/A"
-            )
-
-            raids.append(
-                {
-                    "raid_name": raid_name,
-                    "level": level,
-                    "coords": coords,
-                    "country": country,
-                    "maps_url": (
-                        f"https://maps.google.com/?q={coords}"
-                    ),
-                }
-            )
+            quests.append({
+                "pokemon": pokemon,
+                "pokemon_id": pokemon_id,
+                "quest": quest,
+                "coords": coords,
+                "inicio": fecha_inicio,
+                "fin": fecha_fin,
+                "pais": pais.upper(),
+                "maps": maps
+            })
 
         except Exception:
             continue
 
-    return raids
+    return quests
+
+
+def mostrar_quests(quests):
+    print("\n")
+    print("=" * 75)
+    print("                    POKÉMON GO QUEST SCANNER")
+    print("=" * 75)
+
+    print(f"\n[+] Quests encontradas: {len(quests)}\n")
+
+    for i, q in enumerate(quests, start=1):
+
+        print("╔" + "═" * 70 + "╗")
+        print(f"║ QUEST #{i}".ljust(71) + "║")
+        print("╠" + "═" * 70 + "╣")
+
+        print(f"║ Pokémon      : {q['pokemon']}".ljust(71) + "║")
+        print(f"║ Pokémon ID   : {q['pokemon_id']}".ljust(71) + "║")
+        print(f"║ Quest        : {q['quest']}".ljust(71) + "║")
+        print(f"║ Coordenadas  : {q['coords']}".ljust(71) + "║")
+        print(f"║ País         : {q['pais']}".ljust(71) + "║")
+        print(f"║ Inicio       : {q['inicio']}".ljust(71) + "║")
+        print(f"║ Expira       : {q['fin']}".ljust(71) + "║")
+        print(f"║ Google Maps  : {q['maps']}".ljust(71) + "║")
+
+        print("╚" + "═" * 70 + "╝")
+        print()
+
+    print(f"[✓] Total mostrado: {len(quests)} quests")
 
 
 if __name__ == "__main__":
-
     try:
+        quests = obtener_quests()
 
-        raid_data = get_raid_data()
-
-        print(f"\nSe encontraron {len(raid_data)} Raids:\n")
-
-        for raid in raid_data:
-
-            print("=" * 60)
-
-            print(f"Raid         : {raid['raid_name']}")
-            print(f"Nivel        : {raid['level']}")
-            print(f"Coords       : {raid['coords']}")
-            print(f"País         : {raid['country']}")
-            print(f"Maps         : {raid['maps_url']}")
+        if quests:
+            mostrar_quests(quests)
+        else:
+            print("[!] No se encontraron quests.")
 
     except Exception as e:
+        print(f"[!] Error: {e}")
 
-        print(f"Error: {e}")
 ```
 
 ### 3. Instalar la dependencia necesaria
@@ -634,7 +636,7 @@ py -3.13 pre_questtest.py
 - Se detecta correctamente la recompensa de la quest y la duración de esta misma.
 - Se extraen las coordenadas desde los atributos `data-clipboard-text`.
 - Se obtienen correctamente los tiempos de inicio y finalización de cada quest.
-- Se imprime en consola una lista organizada con la recompensa de la quest, coordenadas, país, tiempo de inicio, tiempo de expiración y enlace de Google Maps.
+- Se imprime en consola una lista organizada con la recompensa de la quest, ID, coordenadas, país, tiempo de inicio, tiempo de expiración y enlace de Google Maps.
 - Esta prueba permite verificar técnicamente que la página responde correctamente y que el parseo base funciona antes de integrar la lógica en el bot de Discord.
 
 ## Imagen de referencia
