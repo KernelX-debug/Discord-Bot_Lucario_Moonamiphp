@@ -227,18 +227,15 @@ def get_rocket_data():
     for row in rows:
         cells = row.find_all("td")
 
-        # Saltar filas vacías o incompletas
         if len(cells) < 7:
             continue
 
         try:
-            # Nombre/tipo rocket
+
             rocket_type = clean_text(cells[0].get_text())
 
-            # Número ID
             number = clean_text(cells[1].get_text())
 
-            # Coordenadas
             coords_match = COORDS_REGEX.search(str(cells[2]))
 
             if not coords_match:
@@ -246,13 +243,10 @@ def get_rocket_data():
 
             coords = coords_match.group(1)
 
-            # Start Time
             start_time = clean_text(cells[4].get_text())
 
-            # End Time
             end_time = clean_text(cells[5].get_text())
 
-            # País
             country = clean_text(cells[6].get_text()).upper()
 
             rockets.append(
