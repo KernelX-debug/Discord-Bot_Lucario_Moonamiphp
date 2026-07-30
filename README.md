@@ -297,16 +297,16 @@ python pre_rockettest.py
 
 ## Resultado esperado
 
-* Se realiza una petición HTTP directa a la página Rocket de Moonani.
-* Se procesa el HTML recibido utilizando BeautifulSoup.
-* Se extraen y limpian los datos embebidos en la tabla de Rockets.
-* Se detectan correctamente los tipos Rocket y los líderes Rocket (Arlo, Cliff, Sierra y Giovanni).
-* Se extraen las coordenadas desde los atributos `data-clipboard-text`.
-* Se obtienen correctamente los tiempos de inicio y finalización de cada Rocket.
-* Se imprime en consola una lista organizada con tipo Rocket, líder Rocket, coordenadas, país, tiempo de aparición, tiempo de expiración y enlace de Google Maps.
-* Esta prueba permite verificar técnicamente que la página responde correctamente y que el parseo base funciona antes de integrar la lógica en el bot de Discord.
+- Se realiza una petición HTTP directa a la página Rocket de Moonani.
+- Se procesa el HTML recibido utilizando BeautifulSoup.
+- Se extraen y limpian los datos embebidos en la tabla de Rockets.
+- Se detectan correctamente los tipos Rocket y los líderes Rocket (Arlo, Cliff, Sierra y Giovanni).
+- Se extraen las coordenadas desde los atributos `data-clipboard-text`.
+- Se obtienen correctamente los tiempos de inicio y finalización de cada Rocket.
+- Se imprime en consola una lista organizada con tipo Rocket, líder Rocket, coordenadas, país, tiempo de aparición, tiempo de expiración y enlace de Google Maps.
+- Esta prueba permite verificar técnicamente que la página responde correctamente y que el parseo base funciona antes de integrar la lógica en el bot de Discord.
 
-**Actualización: Últimamente se presentan errores en la cantidad de información de la tabla dinámica de la sección rockets Moonani, dicha problemática escapa de mis manos ya que no soy programador oficial de esta plataforma web**
+**ACTUALIZACIÓN IMPORTANTE: Últimamente se presentan errores en la cantidad de información de la tabla dinámica de la sección rockets Moonani, dicha problemática escapa de mis manos ya que no soy programador oficial de esta plataforma web**
 - Puedes revisar el estado de la página desde [Moonani Rockets Status](https://moonani.com/PokeList/rocket.php)
 
 *Recuerda que, si no estás pagando por el producto, tú eres el producto*
@@ -315,6 +315,106 @@ python pre_rockettest.py
 
 <p align="center">
   <img src="assets/testrocket.png" alt="test de rocket" width="100%">
+</p>
+
+## Prueba de funcionamiento breve para raids
+
+Antes de usar el bot de Discord, es posible validar desde cero la extraccion y el parseo de datos de las tablas dinámicas de Moonani en la sección de raids con un script independiente con apoyo de la libreria `BeautifulSoup`. Esta prueba no requiere clonar el repositorio completo ni configurar Discord.
+
+### 1. Crear una carpeta de trabajo
+
+```powershell
+mkdir prueba_raids_moonani
+cd prueba_raids_moonani
+```
+
+### 2. Crear el archivo pre_raidtest.py
+Crea un archivo python llamado `pre_raidtest.py` con este contenido:
+
+```python
+import requests
+import re
+import html
+
+def extraer_coords(texto):
+    match = re.search(r'data-clipboard-text="([^"]+)"', texto)
+    return match.group(1) if match else ""
+
+def limpiar_nombre(texto):
+    
+    texto = html.unescape(texto)
+    
+    texto = re.sub(r'<[^>]+>', '', texto)
+    
+    return texto.strip()
+
+def extraer_pais(texto):
+    texto = html.unescape(texto)
+    texto = re.sub(r'<[^>]+>', '', texto).strip()
+    return texto if texto else "??"
+
+url = "https://moonani.com/PokeList/ajax.php?page=pokemon&action=load"
+payload = {
+    "iv": 100,
+    "pvp": 0,
+    "pokemons": "",
+    "start": 0,
+    "length": 230,
+    "draw": 1
+}
+headers = {
+    "Referer": "https://moonani.com/PokeList/index.php",
+    "Content-Type": "application/x-www-form-urlencoded"
+}
+
+r = requests.post(url, data=payload, headers=headers)
+data = r.json().get("data", [])
+
+print(f"Total pokémones recibidos: {len(data)}\n")
+
+for p in data:
+    nombre = limpiar_nombre(p["Name"])
+    coords = extraer_coords(p["Coords"])
+    shiny  = "✨ SHINY" if p["Shiny"] == "Yes" else ""
+    pais   = extraer_pais(p["Country"])
+
+    print(f"{'='*50}")
+    print(f"🎯 {nombre} #{p['Number']} {shiny}")
+    print(f"📍 {coords}")
+    print(f"⚡ CP: {p['CP']} | Nivel: {p['Level']}")
+    print(f"💪 ATK:{p['Attack']} DEF:{p['Defense']} HP:{p['HP']}")
+    print(f"⏱️  Inicio: {p['Start Time']}")
+    print(f"⏱️  Fin:    {p['End Time']}")
+    print(f"🌍 País: {pais}")
+    print(f"🗺️  https://maps.google.com/?q={coords}")
+```
+
+### 3. Instalar la dependencia necesaria
+
+```powershell
+pip install requests beautifulsoup4
+```
+
+### 4. Ejecutar la prueba
+
+```powershell
+py -3.13 pre_raidtest.py
+```
+
+## Resultado esperado
+- Se realiza una petición HTTP directa a la página Raids de Moonani.
+- Se procesa el HTML recibido utilizando BeautifulSoup.
+- Se extraen y limpian los datos embebidos en la tabla de Raids.
+- Se detectan correctamente los jefes de incursión y el nivel de esta misma.
+- Se extraen las coordenadas desde los atributos `data-clipboard-text`.
+- Se obtienen correctamente los tiempos de inicio y finalización de cada Raid.
+- Se imprime en consola una lista organizada con el jefe de incursión, nivel, coordenadas, país, tiempo de inicio, tiempo de expiración y enlace de Google Maps.
+- Esta prueba permite verificar técnicamente que la página responde correctamente y que el parseo base funciona antes de integrar la lógica en el bot de Discord.
+
+## Imagen de referencia
+
+<p align="center">
+  <img src="assets/raidtest.png" alt="test de moonami" width="100%">
 </p>
 
 ## Instalacion para uso como bot de discord
@@ -346,7 +446,7 @@ MOONANI_TIMEOUT=20
 MOONANI_PAGE_SIZE=100
 MOONANI_MAX_SCAN_RECORDS=10000
 MOONANI_RESOLVE_COUNTRIES=false
-MOONANI_GEOCODER_ENDPOINT=
+MOONANI_GEOCODER_ENDPOINT=https://nominatim.openstreetmap.org/reverse
 MOONANI_GEOCODER_USER_AGENT=Lucario Discord Bot/1.0
 LUCARIO_SETTINGS_PATH=lucario_guild_settings.json
 LUCARIO_MONITOR_INTERVAL_SECONDS=45
@@ -387,7 +487,7 @@ py -3.13 discord_bot.py
 
 <p align="center">
   <img src="assets/chikoritasearch.png" alt="Busqueda de Chikorita" width="45%">
-  <img src="assets/agregar_canal_iv100.png" alt="Agregar canal iv100" width="41%">
+  <img src="assets/agregar_canal_iv100.png" alt="Agregar canal iv100" width="41.5%">
 </p>
 
 ## Como invitar el bot a tu servidor
