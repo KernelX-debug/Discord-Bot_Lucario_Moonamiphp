@@ -51,8 +51,13 @@ Bot de Discord en Python que consulta el endpoint de Moonani PokeList para obten
 
 ## Requisitos
 
-- Python 3.13 recomendado
-- Un bot creado en el [Discord Developer Portal](https://discord.com/developers/applications)
+- Windows SO (Recomendado)
+- Python 3.13 (recomendado)
+- Un bot creado en el [Discord Developer Portal](https://discord.com/developers/applications) (Obligatorio)
+- Cuenta en Railway u otra "cloud platform" para uso del bot 24/7 sin tener la compu encendida (Opcional)
+- Acceso administrativo en el servidor de discord donde se gusta acoplar este servicio (Obligatorio)
+
+**SI BUSCAS DE FORMA DIRECTA LA CONFIGURACIÓN DEL BOT EN DISCORD PUEDES SALTARTE ESTA PARTE E IR [AQUÍ](https://github.com/KernelX-debug/Discord-Bot_Lucario_Moonaniphp#instalacion-para-uso-como-bot-de-discord)**
 
 ## Prueba de funcionamiento breve para pokemones
 
@@ -735,6 +740,16 @@ py -3.13 discord_bot.py
 
 - Si Moonani no devuelve pais, el bot muestra `Unknown`. Puedes activar `MOONANI_RESOLVE_COUNTRIES=true` para intentar resolver el pais desde las coordenadas usando reverse geocoding.
 - El endpoint publico de Nominatim puede devolver `429 Too Many Requests` si recibe demasiadas consultas. Para un bot publico, lo ideal es usar un geocoder propio, uno autoalojado o un proveedor con cuota adecuada.
+- La sección de rockets puede tener problemas temporales en cuanto a los datos de la tabla dinámica, como antes lo mencioné, esto se debe a la página en si.
+- Si llegas a observar `CommandInvokeError` al ejecutar algún comando en discord, te recomiendo revises las operaciones del Windows Defender y permitas las acciones de python en el ordenador, de igual manera esto no afecta al funcionamiento del bot. En caso de deploy en servidores este tampoco es un problema mayor.
+
+## Patrocíname ♡
+
+<p align="center">
+  <a href="https://buymeacoffee.com/ghericasas" target="_blank">
+    <img src="https://buymeacoffee.com" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" >
+  </a>
+</p>
 
 ## Licencia
 **MIT License**
