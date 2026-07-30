@@ -41,30 +41,20 @@ def get_raid_data():
     for row in rows:
 
         cells = row.find_all("td")
-
-        # Validar columnas mínimas
+        
         if len(cells) < 7:
             continue
 
         try:
 
-            # =========================
-            # NOMBRE RAID
-            # =========================
             raid_name = clean_text(
                 cells[0].get_text(" ", strip=True)
             )
 
-            # =========================
-            # NIVEL RAID
-            # =========================
             level = clean_text(
                 cells[2].get_text(" ", strip=True)
             )
 
-            # =========================
-            # COORDENADAS
-            # =========================
             coords_button = cells[3].find(
                 attrs={"data-clipboard-text": True}
             )
@@ -76,9 +66,6 @@ def get_raid_data():
                 "data-clipboard-text"
             ].strip()
 
-            # =========================
-            # PAÍS
-            # =========================
             country_match = re.search(
                 r'flags/([a-z]{2})\.png',
                 str(cells[6]),
