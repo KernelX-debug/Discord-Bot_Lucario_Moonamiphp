@@ -309,7 +309,7 @@ python pre_rockettest.py
 **ACTUALIZACIÓN IMPORTANTE: Últimamente se presentan errores en la cantidad de información de la tabla dinámica de la sección rockets Moonani, dicha problemática escapa de mis manos ya que no soy programador oficial de esta plataforma web**
 - Puedes revisar el estado de la página desde [Moonani Rockets Status](https://moonani.com/PokeList/rocket.php)
 
-*Recuerda que, si no estás pagando por el producto, tú eres el producto*
+*si no estás pagando por el producto, tú eres el producto*
 
 ## Imagen de referencia
 
