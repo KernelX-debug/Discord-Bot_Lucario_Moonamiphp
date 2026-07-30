@@ -480,6 +480,170 @@ py -3.13 pre_raidtest.py
   <img src="assets/testraid.png" alt="test de moonami" width="100%">
 </p>
 
+## Prueba de funcionamiento breve para quests
+
+Antes de usar el bot de Discord, es posible validar la extraccion y el parseo de datos de las tablas dinámicas de Moonani en la sección de quests con un script independiente con apoyo de la libreria `BeautifulSoup`. Esta prueba no requiere clonar el repositorio completo ni configurar Discord.
+
+### 1. Crear una carpeta de trabajo
+
+```powershell
+mkdir prueba_quests_moonani
+cd prueba_quests_moonani
+```
+
+### 2. Crear el archivo pre_questtest.py
+Crea un archivo python llamado `pre_questtest.py` con este contenido:
+
+```python
+import re
+import time
+import random
+import requests
+from bs4 import BeautifulSoup
+
+URL = "https://moonani.com/PokeList/raid.php"
+
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/136.0.0.0 Safari/537.36"
+    ),
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer": "https://moonani.com/PokeList/",
+}
+
+session = requests.Session()
+session.headers.update(HEADERS)
+
+
+def clean_text(value):
+    return re.sub(r"\s+", " ", value).strip()
+
+
+def get_raid_data():
+
+    time.sleep(random.uniform(1.5, 3.5))
+
+    response = session.get(URL, timeout=20)
+
+    response.raise_for_status()
+
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    raids = []
+
+    rows = soup.find_all("tr")
+
+    for row in rows:
+
+        cells = row.find_all("td")
+
+        if len(cells) < 7:
+            continue
+
+        try:
+
+            raid_name = clean_text(
+                cells[0].get_text(" ", strip=True)
+            )
+
+            level = clean_text(
+                cells[2].get_text(" ", strip=True)
+            )
+
+            coords_button = cells[3].find(
+                attrs={"data-clipboard-text": True}
+            )
+
+            if not coords_button:
+                continue
+
+            coords = coords_button[
+                "data-clipboard-text"
+            ].strip()
+
+            country_match = re.search(
+                r'flags/([a-z]{2})\.png',
+                str(cells[6]),
+                re.IGNORECASE
+            )
+
+            country = (
+                country_match.group(1).upper()
+                if country_match else "N/A"
+            )
+
+            raids.append(
+                {
+                    "raid_name": raid_name,
+                    "level": level,
+                    "coords": coords,
+                    "country": country,
+                    "maps_url": (
+                        f"https://maps.google.com/?q={coords}"
+                    ),
+                }
+            )
+
+        except Exception:
+            continue
+
+    return raids
+
+
+if __name__ == "__main__":
+
+    try:
+
+        raid_data = get_raid_data()
+
+        print(f"\nSe encontraron {len(raid_data)} Raids:\n")
+
+        for raid in raid_data:
+
+            print("=" * 60)
+
+            print(f"Raid         : {raid['raid_name']}")
+            print(f"Nivel        : {raid['level']}")
+            print(f"Coords       : {raid['coords']}")
+            print(f"País         : {raid['country']}")
+            print(f"Maps         : {raid['maps_url']}")
+
+    except Exception as e:
+
+        print(f"Error: {e}")
+```
+
+### 3. Instalar la dependencia necesaria
+
+```powershell
+pip install requests beautifulsoup4
+```
+
+### 4. Ejecutar la prueba
+
+```powershell
+py -3.13 pre_questtest.py
+```
+
+## Resultado esperado
+- Se realiza una petición HTTP directa a la página Quests de Moonani.
+- Se procesa el HTML recibido utilizando BeautifulSoup.
+- Se extraen y limpian los datos embebidos en la tabla de Quests.
+- Se detecta correctamente la recompensa de la quest y la duración de esta misma.
+- Se extraen las coordenadas desde los atributos `data-clipboard-text`.
+- Se obtienen correctamente los tiempos de inicio y finalización de cada quest.
+- Se imprime en consola una lista organizada con la recompensa de la quest, coordenadas, país, tiempo de inicio, tiempo de expiración y enlace de Google Maps.
+- Esta prueba permite verificar técnicamente que la página responde correctamente y que el parseo base funciona antes de integrar la lógica en el bot de Discord.
+
+## Imagen de referencia
+
+<p align="center">
+  <img src="assets/testquest.png" alt="test de moonami" width="100%">
+</p>
+
+
 ## Instalacion para uso como bot de discord
 ### Clonar el repositorio
 
