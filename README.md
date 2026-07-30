@@ -387,7 +387,7 @@ py -3.13 discord_bot.py
 
 <p align="center">
   <img src="assets/chikoritasearch.png" alt="Busqueda de Chikorita" width="45%">
-  <img src="assets/agregar_canal_iv100.png" alt="Agregar canal iv100" width="45%">
+  <img src="assets/agregar_canal_iv100.png" alt="Agregar canal iv100" width="41%">
 </p>
 
 ## Como invitar el bot a tu servidor
@@ -410,4 +410,4 @@ py -3.13 discord_bot.py
 ## Licencia
 **MIT License**
 
-[mit-license.org/license.txt](https://mit-license.org/license.txt)
+[mit-license.org](https://mit-license.org/license.txt)
