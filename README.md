@@ -710,14 +710,14 @@ LUCARIO_ALERT_LIMIT_0IV=250
 py -3.13 discord_bot.py
 ```
 
-## Ejemplos de uso
+## 👇 Ejemplos de uso
 
 ```text
 /pokemon nombre:wiglett cantidad:3
 /coords nombre:pikachu cantidad:5
 ```
 
-## Funcionamiento
+## 🧐 Funcionamiento
 
 <p align="center">
   <img src="assets/chikoritasearch.png" alt="Busqueda de Chikorita" width="45%">
@@ -732,9 +732,12 @@ py -3.13 discord_bot.py
 4. Concede permisos como `View Channels`, `Send Messages`, `Embed Links` y `Read Message History`.
 5. Abre el enlace generado y selecciona tu servidor.
 
-## Mejoras futuras
+## 🚀 Mejoras futuras
 
-- Utilizando el endpoint se puede acceder a más filtros de pokemones como los perfet league R1
+- Utilizando el endpoint se puede acceder a más filtros de pokemones como los perfect league R1
+- El endpoint principal incluye pokemones con iv random que se consideran "caramelos" en la página web de Moonani, estos pueden ser agregados al bot
+- Se puede buscar una solución al problema de los rockets, ya que la app de pokelist si aparecen los filtros de estos mismos 🤔
+- Hasta la fecha, esta ya se considera una versión oficial del proyecto 🥳🥳
 
 ## ⚙️ Notas
 
@@ -742,8 +745,14 @@ py -3.13 discord_bot.py
 - El endpoint publico de Nominatim puede devolver `429 Too Many Requests` si recibe demasiadas consultas. Para un bot publico, lo ideal es usar un geocoder propio, uno autoalojado o un proveedor con cuota adecuada.
 - La sección de rockets puede tener problemas temporales en cuanto a los datos de la tabla dinámica, como antes lo mencioné, esto se debe a la página en si.
 - Si llegas a observar `CommandInvokeError` al ejecutar algún comando en discord, te recomiendo revises las operaciones del Windows Defender y permitas las acciones de python en el ordenador, de igual manera esto no afecta al funcionamiento del bot. En caso de deploy en servidores este tampoco es un problema mayor.
+- Puedes revisar la carpeta assets para revisar contenido multimedia del uso de este bot en discord.
+- Si estás viendo esto en su momento, felices fiestas patrias bro.
 
-## ☁️ Hosting gratuito 24/7
+<p align="left">
+  <img src="https://media1.tenor.com/m/Qr0iBlPVDgUAAAAd/emperors-new-groove-kuzco.gif" alt="Kuzco" width="300">
+</p>
+
+## ☁️ Hosting de prueba gratuita 24/7
 
 Para mantener el bot activo sin necesidad de tener tu PC encendida puedes usar [Railway](https://railway.app). Simplemente conecta tu repositorio de GitHub y agrega las siguientes variables de entorno con sus respectivos valores en la sección **Variables:**
 
@@ -768,8 +777,7 @@ Para mantener el bot activo sin necesidad de tener tu PC encendida puedes usar [
   </a>
 </p>
 
-
 ## 📜 Licencia
 **MIT License**
 
-[mit-license.org](https://mit-license.org/license.txt)
+[MIT License org](https://mit-license.org/license.txt)
